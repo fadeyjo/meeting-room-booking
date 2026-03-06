@@ -1,0 +1,8 @@
+node_modules
+**/node_modules
+.git
+frontend/dist
+backend/services/auth-service/dist
+*.md
+.env
+.env.*
