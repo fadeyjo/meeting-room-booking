@@ -1,0 +1,5 @@
+/backend/node_modules
+
+/backend/services/auth-service/dist
+/backend/services/auth-service/node_modules
+/backend/services/auth-service/.env
