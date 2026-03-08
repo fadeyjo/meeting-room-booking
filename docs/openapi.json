@@ -109,7 +109,7 @@
       "get": {
         "tags": ["Auth"],
         "summary": "список пользователей (только админ)",
-        "description": "возвращает всех сотрудников для админского интерфейса",
+        "description": "возвращает всех сотрудников для админского интерфейса. уволенные (fired_at не null) в списке помечены полем firedAt",
         "responses": {
           "200": {
             "description": "список пользователей",
@@ -150,11 +150,41 @@
         }
       }
     },
+    "/api/auth/users/{id}": {
+      "patch": {
+        "tags": ["Auth"],
+        "summary": "изменить данные сотрудника (только админ)",
+        "description": "частичное обновление: можно передать любые поля из UpdateUser. установка firedAt увольняет сотрудника — такого сотрудника нельзя будет добавлять в приглашения и т.п.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "id пользователя (person_id)" }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateUser" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "пользователь обновлён",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "404": { "description": "пользователь не найден" },
+          "409": { "description": "email или телефон уже занят другим пользователем" },
+          "403": { "description": "только админ" }
+        }
+      }
+    },
     "/api/auth/users/search": {
       "get": {
         "tags": ["Auth"],
         "summary": "поиск пользователей",
-        "description": "поиск по ФИО/должности для приглашения на встречу. пример: ?q=Губин",
+        "description": "поиск по ФИО/должности для приглашения на встречу. возвращаются только действующие сотрудники (не уволенные). пример: ?q=Губин",
         "parameters": [
           {
             "name": "q",
@@ -557,7 +587,24 @@
           "lastName": { "type": "string" },
           "patronymic": { "type": "string" },
           "position": { "type": "string" },
-          "role": { "type": "string" }
+          "role": { "type": "string" },
+          "firedAt": { "type": "string", "format": "date-time", "nullable": true, "description": "дата увольнения; если задана — сотрудник уволен, добавлять его нигде нельзя" }
+        }
+      },
+      "UpdateUser": {
+        "type": "object",
+        "description": "все поля опциональны; передаются только изменяемые",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "phoneNumber": { "type": "string" },
+          "birth": { "type": "string", "format": "date" },
+          "lastName": { "type": "string" },
+          "firstName": { "type": "string" },
+          "patronymic": { "type": "string" },
+          "position": { "type": "string" },
+          "password": { "type": "string", "minLength": 8 },
+          "roleName": { "type": "string", "enum": ["User", "Admin"] },
+          "firedAt": { "type": "string", "format": "date-time", "nullable": true }
         }
       },
       "CreateUser": {

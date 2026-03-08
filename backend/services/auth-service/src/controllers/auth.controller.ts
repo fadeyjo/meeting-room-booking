@@ -1,9 +1,6 @@
 import { NextFunction, Request, Response } from "express";
+import type { RegisterDto, LoginDto, RefreshDto, LogoutDto } from "@shared-types/types";
 import { AuthService } from "../services/auth.service";
-import { RegisterDto } from "../dto/register.dto";
-import { LoginDto } from "../dto/login.dto";
-import { RefreshDto } from "../dto/refresh.dto";
-import { LogoutDto } from "../dto/logout.dto";
 
 const authService = new AuthService();
 

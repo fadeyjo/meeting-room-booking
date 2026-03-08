@@ -1,9 +1,8 @@
-import { Outlet } from 'react-router-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Layout() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -20,33 +19,29 @@ export default function Layout() {
           </Link>
           <nav className="flex items-center gap-4">
             {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-slate-600 hover:text-slate-900 text-sm font-medium"
-              >
-                Выйти
-              </button>
-            ) : (
               <>
-                <Link
-                  to="/login"
+                {isAdmin && (
+                  <Link to="/admin" className="text-slate-600 hover:text-slate-900 text-sm font-medium">
+                    Админ
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
                   className="text-slate-600 hover:text-slate-900 text-sm font-medium"
                 >
-                  Вход
-                </Link>
-                <Link
-                  to="/register"
-                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                >
-                  Регистрация
-                </Link>
+                  Выйти
+                </button>
               </>
+            ) : (
+              <Link to="/login" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                Вход
+              </Link>
             )}
           </nav>
         </div>
       </header>
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 flex flex-col p-4 max-w-4xl w-full mx-auto">
         <Outlet />
       </main>
     </div>

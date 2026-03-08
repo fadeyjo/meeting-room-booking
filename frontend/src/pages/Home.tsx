@@ -1,16 +1,27 @@
+import { Link } from 'react-router-dom';
+
+const cards = [
+  { to: '/book', title: 'Забронировать переговорку', desc: 'Выбрать дату или конкретную комнату' },
+  { to: '/invite', title: 'Пригласить на встречу', desc: 'Выбрать бронь и пригласить коллег' },
+  { to: '/meetings', title: 'Мои встречи на 2 недели', desc: 'Список ближайших встреч' },
+  { to: '/invitations', title: 'Приглашения', desc: 'Входящие приглашения в переговорки' },
+];
+
 export default function Home() {
   return (
-    <div className="w-full max-w-2xl text-center">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-10">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">
-          Бронирование переговорных
-        </h1>
-        <p className="text-slate-500">
-          опа опа, победа!!!!!!!! тут потом будет интерфейс какой-то
-        </p>
-        <div className="mt-8 p-4 rounded-xl bg-primary-50 text-primary-800 text-sm">
-          если ты видишь это сообщение, то токены авторизации сохранены
-        </div>
+    <div className="w-full py-6">
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Главная</h1>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {cards.map(({ to, title, desc }) => (
+          <Link
+            key={to}
+            to={to}
+            className="block p-6 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-primary-300 hover:shadow-md transition text-left"
+          >
+            <h2 className="text-lg font-semibold text-slate-800 mb-1">{title}</h2>
+            <p className="text-slate-500 text-sm">{desc}</p>
+          </Link>
+        ))}
       </div>
     </div>
   );

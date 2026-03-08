@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -25,8 +25,9 @@ export default function Login() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
+    <div className="flex-1 flex items-center justify-center py-8">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
         <h1 className="text-2xl font-bold text-slate-800 mb-1">Вход</h1>
         <p className="text-slate-500 text-sm mb-6">Войдите в аккаунт для бронирования</p>
 
@@ -73,12 +74,7 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-slate-500 text-sm">
-          Нет аккаунта?{' '}
-          <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-            Зарегистрироваться
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

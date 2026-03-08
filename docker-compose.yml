@@ -11,6 +11,7 @@ services:
     volumes:
       - ./init_db/00-use-db.sql:/docker-entrypoint-initdb.d/00-use-db.sql:ro
       - ./init_db/script.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./init_db/02-seed-admin.sql:/docker-entrypoint-initdb.d/02-seed-admin.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 5s

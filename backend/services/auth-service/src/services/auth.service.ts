@@ -4,12 +4,10 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken
-} from "../../../../shared/utils/jwt";
-import { RegisterDto } from "../dto/register.dto";
-import { TokensDto } from "../dto/tokens.dto";
-import { HttpError } from "../../../../shared/utils/http-error";
-import { AccessTokenPayload } from "../../../../shared/utils/jwt";
-import { LogoutedDto } from "../dto/logouted.dto";
+} from "@shared-backend/utils/jwt";
+import type { RegisterDto, TokensDto, LogoutedDto } from "@shared-types/types";
+import { HttpError } from "@shared-backend/utils/http-error";
+import { AccessTokenPayload } from "@shared-backend/utils/jwt";
 
 export class AuthService {
 

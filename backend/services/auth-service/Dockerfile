@@ -8,10 +8,12 @@ COPY backend/services/auth-service/package*.json ./
 RUN npm ci
 
 COPY backend/services/auth-service/ ./
+COPY backend/shared ./shared
+COPY shared ./shared-root
 COPY docs/openapi.json ./openapi.json
-RUN npx prisma generate
-RUN npm run build
+RUN ./node_modules/.bin/prisma generate
+RUN npm run build:docker
 
 EXPOSE 5000
 
-CMD ["node", "dist/app.js"]
+CMD ["node", "dist/src/app.js"]
