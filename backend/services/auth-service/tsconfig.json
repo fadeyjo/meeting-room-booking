@@ -14,15 +14,12 @@
     "resolveJsonModule": true,
 
     "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["../../shared/*"]
-    }
   },
 
   "include": [
     "src/**/*",
-    "../../shared/**/*"
+    "../../shared/**/*",
   ],
 
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

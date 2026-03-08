@@ -6,7 +6,7 @@ import path from "path";
 import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/auth.routes";
-import { errorHandler } from "@shared/middleware/error.middleware";
+import { errorHandler } from "../../../shared/middleware/error.middleware";
 
 dotenv.config({
   path: path.resolve(__dirname, "../../../shared/config/.env")

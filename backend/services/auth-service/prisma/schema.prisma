@@ -1,0 +1,118 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["linux-arm64-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+model Person {
+  person_id       Int       @id @default(autoincrement()) @db.UnsignedInt
+  created_at      DateTime
+  email           String    @unique @db.VarChar(320)
+  phone_number    String    @unique @db.VarChar(12)
+  birth           DateTime  @db.Date
+  last_name       String    @db.VarChar(50)
+  first_name      String    @db.VarChar(50)
+  patronymic      String?   @db.VarChar(50)
+  position_id     Int       @db.UnsignedTinyInt
+  hashed_password String    @db.VarChar(600)
+  role_id         Int       @db.UnsignedTinyInt
+  fired_at        DateTime?
+
+  position Position @relation(fields: [position_id], references: [position_id])
+  role     Role     @relation(fields: [role_id], references: [role_id])
+
+  refresh_tokens RefreshToken[]
+  organized_bookings Booking[] @relation("OrganizerBookings")
+
+  invitations_sent     Invitation[] @relation("InvitationInitiator")
+  invitations_received Invitation[] @relation("InvitationGuest")
+
+  @@map("persons")
+}
+
+model RefreshToken {
+  token_id     Int      @id @default(autoincrement()) @db.UnsignedInt
+  hashed_token String   @unique @db.VarChar(600)
+  person_id    Int      @db.UnsignedInt
+  expires      DateTime
+  is_revoked   Boolean
+
+  person Person @relation(fields: [person_id], references: [person_id])
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  role_id   Int      @id @default(autoincrement()) @db.UnsignedTinyInt
+  role_name String   @unique @db.VarChar(50)
+
+  persons Person[]
+
+  @@map("roles")
+}
+
+model Position {
+  position_id Int    @id @default(autoincrement()) @db.UnsignedTinyInt
+  position    String @unique @db.VarChar(50)
+
+  persons Person[]
+
+  @@map("positions")
+}
+
+model Room {
+  room_id   Int    @id @default(autoincrement()) @db.UnsignedSmallInt
+  room_name String @unique @db.VarChar(50)
+  floor     Int    @db.UnsignedTinyInt
+  room      Int    @db.UnsignedSmallInt
+
+  bookings Booking[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  book_id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  organizer_id        Int      @db.UnsignedInt
+  created_at          DateTime
+  room_id             Int      @db.UnsignedSmallInt
+  started_at          DateTime
+  ended_at            DateTime
+  booking_description String   @db.Text
+
+  organizer Person @relation("OrganizerBookings", fields: [organizer_id], references: [person_id])
+  room      Room   @relation(fields: [room_id], references: [room_id])
+
+  invitations Invitation[]
+
+  @@map("booking")
+}
+
+model BookingRole {
+  role_id   Int    @id @default(autoincrement()) @db.UnsignedTinyInt
+  role_name String @unique @db.VarChar(50)
+
+  invitations Invitation[]
+
+  @@map("booking_roles")
+}
+
+model Invitation {
+  invitation_id Int      @id @default(autoincrement()) @db.UnsignedInt
+  invitation_on DateTime
+  initiator_id  Int      @db.UnsignedInt
+  guest_id      Int      @db.UnsignedInt
+  book_id       Int      @db.UnsignedInt
+  role_id       Int      @db.UnsignedTinyInt
+
+  initiator Person      @relation("InvitationInitiator", fields: [initiator_id], references: [person_id])
+  guest     Person      @relation("InvitationGuest", fields: [guest_id], references: [person_id])
+  booking   Booking     @relation(fields: [book_id], references: [book_id])
+  role      BookingRole @relation(fields: [role_id], references: [role_id])
+
+  @@map("invitations")
+}

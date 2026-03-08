@@ -1,14 +1,14 @@
-import prisma from "@shared/config/prisma";
+import prisma from "../config/prisma";
 import bcrypt from "bcrypt";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken
-} from "@shared/utils/jwt";
+} from "../../../../shared/utils/jwt";
 import { RegisterDto } from "../dto/register.dto";
 import { TokensDto } from "../dto/tokens.dto";
-import { HttpError } from "@shared/utils/http-error";
-import { AccessTokenPayload } from "@shared/utils/jwt";
+import { HttpError } from "../../../../shared/utils/http-error";
+import { AccessTokenPayload } from "../../../../shared/utils/jwt";
 import { LogoutedDto } from "../dto/logouted.dto";
 
 export class AuthService {
@@ -22,7 +22,7 @@ async refresh(refreshToken: string) {
       throw new HttpError("Не авторизован", 401);
     }
 
-    const tokens = await prisma.refresh_tokens.findMany({
+    const tokens = await prisma.refreshToken.findMany({
       where: {
         person_id: payload.personId,
       }
@@ -48,7 +48,7 @@ async refresh(refreshToken: string) {
       throw new HttpError("Не авторизован", 401);
     }
 
-    await prisma.refresh_tokens.update({
+    await prisma.refreshToken.update({
       where: {
         token_id: findedToken.token_id
       },
@@ -74,7 +74,7 @@ async refresh(refreshToken: string) {
         salt
       );
 
-    await prisma.refresh_tokens.create({
+    await prisma.refreshToken.create({
       data: {
         hashed_token: hashedToken,
         person_id: payload.personId,
@@ -96,27 +96,27 @@ async refresh(refreshToken: string) {
 
   async register(data: RegisterDto) {
     let findedPerson =
-      await prisma.persons
+      await prisma.person
         .findUnique({ where: { email: data.email } })
 
     if (findedPerson)
       throw new HttpError("Пользователь с таким email уже существует", 409)
 
     findedPerson =
-      await prisma.persons
+      await prisma.person
         .findUnique({ where: { phone_number: data.phoneNumber } })
 
     if (findedPerson)
       throw new HttpError("Пользователь с таким номером телефона уже существует", 409)
 
     const role =
-      await prisma.roles
+      await prisma.role
         .findUnique({ where: { role_name: data.roleName } });
 
     if (!role) throw new HttpError("Неизвестная роль", 404);
 
     const position =
-      await prisma.positions
+      await prisma.position
         .findUnique({ where: { position: data.position } });
     
     if (!position) throw new HttpError("Неизвестная должность", 404);
@@ -128,7 +128,7 @@ async refresh(refreshToken: string) {
         salt
       );
 
-    const person = await prisma.persons.create({
+    const person = await prisma.person.create({
       data: {
         email: data.email,
         phone_number: data.phoneNumber,
@@ -160,7 +160,7 @@ async refresh(refreshToken: string) {
         salt
       );
 
-    await prisma.refresh_tokens.create({
+    await prisma.refreshToken.create({
       data: {
         hashed_token: hashedToken,
         person_id: person.person_id,
@@ -181,7 +181,7 @@ async refresh(refreshToken: string) {
   }
 
   async login(email: string, password: string) {
-    const person = await prisma.persons.findUnique({
+    const person = await prisma.person.findUnique({
       where: { email }
     });
 
@@ -212,7 +212,7 @@ async refresh(refreshToken: string) {
         salt
       );
 
-    await prisma.refresh_tokens.create({
+    await prisma.refreshToken.create({
       data: {
         hashed_token: hashedToken,
         person_id: person.person_id,
@@ -241,7 +241,7 @@ async refresh(refreshToken: string) {
       throw new HttpError("Не авторизован", 401);
     }
 
-    await prisma.refresh_tokens.updateMany({
+    await prisma.refreshToken.updateMany({
       where: { person_id: payload.personId },
       data: { is_revoked: true }
     })

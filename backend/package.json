@@ -19,9 +19,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "jsonwebtoken": "^9.0.3",
-    "prisma": "^5.22.0"
+    "jsonwebtoken": "^9.0.3"
   },
   "type": "module"
 }

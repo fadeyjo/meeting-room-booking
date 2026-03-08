@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/auth.controller";
-import { authenticateToken } from "@shared/middleware/auth.middleware";
+import { authenticateToken } from "../../../../shared/middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { logoutSchema, refreshSchema, registerSchema } from "../validation/auth.validation";
 
