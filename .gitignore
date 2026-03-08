@@ -2,6 +2,7 @@
 /backend/services/auth-service/dist
 /backend/services/auth-service/node_modules
 /backend/services/auth-service/.env
+/backend/shared/config/.env
 
 frontend/node_modules
 frontend/dist
