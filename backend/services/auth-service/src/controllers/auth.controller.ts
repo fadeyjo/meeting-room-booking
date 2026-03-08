@@ -4,7 +4,6 @@ import { RegisterDto } from "../dto/register.dto";
 import { LoginDto } from "../dto/login.dto";
 import { RefreshDto } from "../dto/refresh.dto";
 import { LogoutDto } from "../dto/logout.dto";
-import { HttpError } from "../utils/http-error";
 
 const authService = new AuthService();
 

@@ -6,9 +6,11 @@ import path from "path";
 import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/auth.routes";
-import { errorHandler } from "./middleware/error.middleware";
+import { errorHandler } from "@shared/middleware/error.middleware";
 
-dotenv.config();
+dotenv.config({
+  path: path.resolve(__dirname, "../../../shared/config/.env")
+});
 
 const openapiPath = path.join(__dirname, "..", "openapi.json");
 const swaggerDocument = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));

@@ -1,14 +1,14 @@
-import prisma from "../config/prisma";
+import prisma from "@shared/config/prisma";
 import bcrypt from "bcrypt";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken
-} from "../utils/jwt";
+} from "@shared/utils/jwt";
 import { RegisterDto } from "../dto/register.dto";
 import { TokensDto } from "../dto/tokens.dto";
-import { HttpError } from "../utils/http-error";
-import { AccessTokenPayload } from "../utils/jwt";
+import { HttpError } from "@shared/utils/http-error";
+import { AccessTokenPayload } from "@shared/utils/jwt";
 import { LogoutedDto } from "../dto/logouted.dto";
 
 export class AuthService {
@@ -19,7 +19,7 @@ async refresh(refreshToken: string) {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      throw new HttpError("Invalid refresh token", 401);
+      throw new HttpError("Не авторизован", 401);
     }
 
     const tokens = await prisma.refresh_tokens.findMany({
@@ -41,21 +41,19 @@ async refresh(refreshToken: string) {
     }
 
     if (findedToken === null) {
-      throw new HttpError("Refresh token not found", 404);
+      throw new HttpError("Не авторизован", 401);
     }
 
     if (findedToken.is_revoked) {
-      console.log(findedToken.is_revoked)
-      console.log(findedToken.token_id)
-      throw new HttpError("Refresh token is revoked", 401);
+      throw new HttpError("Не авторизован", 401);
     }
 
     await prisma.refresh_tokens.update({
       where: {
-        token_id: findedToken.token_id,
+        token_id: findedToken.token_id
       },
       data: {
-        is_revoked: true,
+        is_revoked: true
       },
     });
 
@@ -102,26 +100,26 @@ async refresh(refreshToken: string) {
         .findUnique({ where: { email: data.email } })
 
     if (findedPerson)
-      throw new HttpError("User by email already exists", 409)
+      throw new HttpError("Пользователь с таким email уже существует", 409)
 
     findedPerson =
       await prisma.persons
         .findUnique({ where: { phone_number: data.phoneNumber } })
 
     if (findedPerson)
-      throw new HttpError("User by phone number already exists", 409)
+      throw new HttpError("Пользователь с таким номером телефона уже существует", 409)
 
     const role =
       await prisma.roles
         .findUnique({ where: { role_name: data.roleName } });
 
-    if (!role) throw new HttpError("Role not found", 404);
+    if (!role) throw new HttpError("Неизвестная роль", 404);
 
     const position =
       await prisma.positions
         .findUnique({ where: { position: data.position } });
     
-    if (!position) throw new HttpError("Position not found", 404);
+    if (!position) throw new HttpError("Неизвестная должность", 404);
 
     let salt = await bcrypt.genSalt();
     const hashedPassword =
@@ -188,13 +186,13 @@ async refresh(refreshToken: string) {
     });
 
     if (!person) {
-      throw new HttpError("User not found", 404);
+      throw new HttpError("Пользователь не зарегистрирован", 404);
     }
 
     const valid = await bcrypt.compare(password, person.hashed_password);
 
     if (!valid) {
-      throw new HttpError("Invalid password", 401);
+      throw new HttpError("Неверный пароль", 401);
     }
 
     const accessToken = generateAccessToken({
@@ -240,7 +238,7 @@ async refresh(refreshToken: string) {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
-      throw new HttpError("Invalid refresh token", 401);
+      throw new HttpError("Не авторизован", 401);
     }
 
     await prisma.refresh_tokens.updateMany({

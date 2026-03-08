@@ -13,7 +13,7 @@ export const authenticateToken = (
     return res.sendStatus(401);
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(" ")[1] as string;
 
   try {
     const decoded = verifyAccessToken(token)
