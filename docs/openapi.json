@@ -1,0 +1,652 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Meeting Room Booking API",
+    "description": "api приложения бронирования переговорных: авторизация, комнаты, бронирования, приглашения",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/", "description": "текущий хост (nginx проксирует /api на микросервисы)" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "вход",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "admin@mail.ru" },
+                  "password": { "type": "string", "example": "admin-777" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "успех",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tokens" }
+              }
+            }
+          },
+          "401": { "description": "неверный логин или пароль" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "обновление токенов",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": { "refreshToken": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "новая пара токенов",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tokens" }
+              }
+            }
+          },
+          "401": { "description": "невалидный или отозванный refresh token" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "выход",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": { "refreshToken": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "успех",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "personId": { "type": "integer" } }
+                }
+              }
+            }
+          },
+          "401": { "description": "невалидный токен" }
+        }
+      }
+    },
+    "/api/auth/users": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "список пользователей (только админ)",
+        "description": "возвращает всех сотрудников для админского интерфейса",
+        "responses": {
+          "200": {
+            "description": "список пользователей",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          },
+          "403": { "description": "доступ только для админа" }
+        }
+      },
+      "post": {
+        "tags": ["Auth"],
+        "summary": "создать аккаунт сотрудника (только админ)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUser" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "пользователь создан",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "409": { "description": "пользователь с таким email или телефоном уже существует" },
+          "403": { "description": "только админ" }
+        }
+      }
+    },
+    "/api/auth/users/search": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "поиск пользователей",
+        "description": "поиск по ФИО/должности для приглашения на встречу. пример: ?q=Губин",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "example": "Губин"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "список пользователей (например: «Программист Губин Егор»)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rooms": {
+      "get": {
+        "tags": ["Rooms"],
+        "summary": "список переговорок",
+        "description": "переговорки с названиями типа «Амурский Тигр (на 20 человек, 3 этаж)»",
+        "parameters": [
+          { "name": "floor", "in": "query", "schema": { "type": "integer" } },
+          { "name": "is_active", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "список комнат",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Room" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rooms/{id}": {
+      "get": {
+        "tags": ["Rooms"],
+        "summary": "переговорка по id",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "данные комнаты",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Room" }
+              }
+            }
+          },
+          "404": { "description": "комната не найдена" }
+        }
+      }
+    },
+    "/api/bookings": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "создать бронирование",
+        "description": "creator_id берётся из токена. после создания редирект на главную.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["room_id", "title", "description", "date", "start_time", "end_time"],
+                "properties": {
+                  "room_id": { "type": "integer" },
+                  "title": { "type": "string", "description": "название встречи" },
+                  "description": { "type": "string", "description": "краткое описание" },
+                  "date": { "type": "string", "format": "date" },
+                  "start_time": { "type": "string", "example": "10:00" },
+                  "end_time": { "type": "string", "example": "11:30" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "бронирование создано",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Booking" }
+              }
+            }
+          },
+          "400": { "description": "время занято или неверные данные" },
+          "404": { "description": "комната не найдена" }
+        }
+      }
+    },
+    "/api/bookings/my": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "мои бронирования",
+        "description": "бронирования, где я создатель",
+        "responses": {
+          "200": {
+            "description": "список бронирований",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Booking" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/my-meetings": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "мои встречи на ближайшие 2 недели",
+        "description": "встречи, где я создатель или приглашённый",
+        "responses": {
+          "200": {
+            "description": "список встреч",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Booking" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "бронирование по id",
+        "description": "детали брони, включая список приглашённых (спикеры и слушатели)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "бронирование с участниками",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingDetail" }
+              }
+            }
+          },
+          "404": { "description": "бронирование не найдено" }
+        }
+      }
+    },
+    "/api/bookings/room/{roomId}/slots": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "свободные слоты по переговорке",
+        "description": "забронировать конкретную переговорку: выбираешь комнату, смотришь свободные даты/время",
+        "parameters": [
+          { "name": "roomId", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "массив свободных слотов (например, [{ start_time, end_time }])",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start_time": { "type": "string" },
+                      "end_time": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/by-date": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "переговорки со свободными слотами на дату",
+        "description": "забронировать по дате: выбираешь дату, получаешь список комнат и свободных окон",
+        "parameters": [
+          { "name": "date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "комнаты с доступными слотами",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "room": { "$ref": "#/components/schemas/Room" },
+                      "slots": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "start_time": { "type": "string" },
+                            "end_time": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations": {
+      "post": {
+        "tags": ["Invitations"],
+        "summary": "пригласить на встречу",
+        "description": "тема письма и время берутся из брони. можно прикрепить сообщение.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["booking_id", "user_id", "role"],
+                "properties": {
+                  "booking_id": { "type": "integer" },
+                  "user_id": { "type": "integer" },
+                  "role": { "type": "string", "enum": ["спикер", "слушатель"] },
+                  "message": { "type": "string", "description": "персональное сообщение приглашённому" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "приглашение создано",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            }
+          },
+          "404": { "description": "бронирование или пользователь не найдены" }
+        }
+      }
+    },
+    "/api/invitations/my": {
+      "get": {
+        "tags": ["Invitations"],
+        "summary": "мои приглашения",
+        "description": "виджет «Приглашения»: приглашения в переговорки для текущего пользователя",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["ожидает", "принято", "отклонено"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "список приглашений",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/InvitationWithBooking" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/booking/{bookingId}": {
+      "get": {
+        "tags": ["Invitations"],
+        "summary": "приглашения по бронированию",
+        "description": "для создателя встречи: кто приглашён, роли (спикер/слушатель), можно менять роли",
+        "parameters": [
+          { "name": "bookingId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "список приглашений с данными пользователей",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Invitation" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/{id}/accept": {
+      "patch": {
+        "tags": ["Invitations"],
+        "summary": "принять приглашение",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "приглашение принято" },
+          "404": { "description": "приглашение не найдено" }
+        }
+      }
+    },
+    "/api/invitations/{id}/decline": {
+      "patch": {
+        "tags": ["Invitations"],
+        "summary": "отклонить приглашение",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "приглашение отклонено" },
+          "404": { "description": "приглашение не найдено" }
+        }
+      }
+    },
+    "/api/invitations/{id}": {
+      "patch": {
+        "tags": ["Invitations"],
+        "summary": "изменить роль приглашённого (спикер/слушатель)",
+        "description": "доступно создателю брони после добавления участников",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "role": { "type": "string", "enum": ["спикер", "слушатель"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "роль обновлена",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            }
+          },
+          "403": { "description": "только создатель брони может менять роли" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Tokens": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "patronymic": { "type": "string" },
+          "position": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      },
+      "CreateUser": {
+        "type": "object",
+        "required": ["email", "phoneNumber", "birth", "lastName", "firstName", "position", "password", "roleName"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "phoneNumber": { "type": "string" },
+          "birth": { "type": "string", "format": "date" },
+          "lastName": { "type": "string" },
+          "firstName": { "type": "string" },
+          "patronymic": { "type": "string" },
+          "position": { "type": "string" },
+          "password": { "type": "string", "minLength": 8 },
+          "roleName": { "type": "string", "enum": ["User", "Admin"] }
+        }
+      },
+      "Room": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "example": "Амурский Тигр (на 20 человек, 3 этаж)" },
+          "floor": { "type": "integer" },
+          "capacity": { "type": "integer" },
+          "has_projector": { "type": "boolean" },
+          "has_tv": { "type": "boolean" },
+          "has_whiteboard": { "type": "boolean" },
+          "is_active": { "type": "boolean" },
+          "description": { "type": "string" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "room_id": { "type": "integer" },
+          "creator_id": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "start_time": { "type": "string" },
+          "end_time": { "type": "string" },
+          "status": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "BookingDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Booking" },
+          {
+            "type": "object",
+            "properties": {
+              "room": { "$ref": "#/components/schemas/Room" },
+              "speakers": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/User" },
+                "description": "спикеры: Валявкин Максим, Губин Егор …"
+              },
+              "listeners": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/User" },
+                "description": "слушатели: Алекперов Низами, Артем Боков …"
+              }
+            }
+          }
+        ]
+      },
+      "Invitation": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "booking_id": { "type": "integer" },
+          "user_id": { "type": "integer" },
+          "role": { "type": "string", "enum": ["спикер", "слушатель"] },
+          "message": { "type": "string" },
+          "status": { "type": "string", "enum": ["ожидает", "принято", "отклонено"] },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "InvitationWithBooking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "booking": { "$ref": "#/components/schemas/Booking" },
+          "role": { "type": "string", "enum": ["спикер", "слушатель"] },
+          "message": { "type": "string" },
+          "status": { "type": "string", "enum": ["ожидает", "принято", "отклонено"] }
+        }
+      }
+    }
+  }
+}

@@ -1,13 +1,17 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/auth.routes";
 import { errorHandler } from "./middleware/error.middleware";
-import swaggerDocument from "./swagger.json";
 
 dotenv.config();
+
+const openapiPath = path.join(__dirname, "..", "openapi.json");
+const swaggerDocument = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
 
 const app = express();
 

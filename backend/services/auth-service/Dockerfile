@@ -8,6 +8,7 @@ COPY backend/services/auth-service/package*.json ./
 RUN npm ci
 
 COPY backend/services/auth-service/ ./
+COPY docs/openapi.json ./openapi.json
 RUN npx prisma generate
 RUN npm run build
 
