@@ -87,6 +87,16 @@ INSERT INTO meeting_room.booking_roles (role_name) VALUES
     ('Слушатель'),
     ('Спикер');
 
+CREATE TABLE IF NOT EXISTS meeting_room.invitations_status (
+    status_id tinyint unsigned auto_increment primary key,
+    status_name varchar(50) not null unique
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO meeting_room.invitations_status (status_name) VALUES
+    ('Ожидает'),
+    ('Принято'),
+    ('Отклонено');
+
 CREATE TABLE IF NOT EXISTS meeting_room.invitations (
     invitation_id int unsigned auto_increment primary key,
     invitation_on datetime not null,
@@ -94,9 +104,12 @@ CREATE TABLE IF NOT EXISTS meeting_room.invitations (
     guest_id int unsigned not null,
     book_id int unsigned not null,
     role_id tinyint unsigned not null,
+    invite_message text not null,
+    status_id tinyint unsigned,
 
     foreign key (initiator_id) references meeting_room.persons (person_id) on delete cascade,
     foreign key (guest_id) references meeting_room.persons (person_id) on delete cascade,
     foreign key (book_id) references meeting_room.booking (book_id) on delete cascade,
-    foreign key (role_id) references meeting_room.booking_roles (role_id) on delete cascade
+    foreign key (role_id) references meeting_room.booking_roles (role_id) on delete cascade,
+    foreign key (status_id) references meeting_room.invitations_status (status_id) on delete cascade
 );

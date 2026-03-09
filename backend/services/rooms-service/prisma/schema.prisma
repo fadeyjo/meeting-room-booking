@@ -109,6 +109,15 @@ model BookingRole {
   @@map("booking_roles")
 }
 
+model InvitationStatus {
+  status_id   Int    @id @default(autoincrement()) @db.UnsignedTinyInt
+  status_name String @unique @db.VarChar(50)
+
+  invitations Invitation[]
+
+  @@map("invitations_status")
+}
+
 model Invitation {
   invitation_id Int      @id @default(autoincrement()) @db.UnsignedInt
   invitation_on DateTime
@@ -116,11 +125,14 @@ model Invitation {
   guest_id      Int      @db.UnsignedInt
   book_id       Int      @db.UnsignedInt
   role_id       Int      @db.UnsignedTinyInt
+  invite_message String  @db.Text
+  status_id     Int      @db.UnsignedTinyInt
 
   initiator Person      @relation("InvitationInitiator", fields: [initiator_id], references: [person_id])
   guest     Person      @relation("InvitationGuest", fields: [guest_id], references: [person_id])
   booking   Booking     @relation(fields: [book_id], references: [book_id])
   role      BookingRole @relation(fields: [role_id], references: [role_id])
+  status    InvitationStatus @relation(fields: [status_id], references: [status_id])
 
   @@map("invitations")
 }
