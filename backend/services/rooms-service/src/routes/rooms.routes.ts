@@ -6,6 +6,6 @@ const router = Router();
 const controller = new RoomsController();
 
 router.get("/", authenticateToken, controller.getRooms);
-//router.get("/:id", authenticateToken, controller.getRoomById);
+router.get("/:id", authenticateToken, controller.getRoomById);
 
 export default router;

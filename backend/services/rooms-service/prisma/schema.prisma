@@ -70,6 +70,11 @@ model Room {
   floor     Int    @db.UnsignedTinyInt
   room      Int    @db.UnsignedSmallInt
   is_active Boolean
+  capacity Int     @db.UnsignedTinyInt
+  has_projector Boolean
+  has_tv Boolean
+  has_whiteboard Boolean
+  room_description String @db.Text
 
   bookings Booking[]
 
@@ -78,11 +83,13 @@ model Room {
 
 model Booking {
   book_id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  title               String   @db.Text
   organizer_id        Int      @db.UnsignedInt
   created_at          DateTime
   room_id             Int      @db.UnsignedSmallInt
-  started_at          DateTime
-  ended_at            DateTime
+  booking_date        DateTime  @db.Date
+  started_at          DateTime  @db.Time
+  ended_at            DateTime  @db.Time
   booking_description String   @db.Text
 
   organizer Person @relation("OrganizerBookings", fields: [organizer_id], references: [person_id])

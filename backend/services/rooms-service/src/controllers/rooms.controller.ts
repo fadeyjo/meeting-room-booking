@@ -5,6 +5,20 @@ import { HttpError } from "@shared-backend/utils/http-error";
 const roomsService = new RoomsService();
 
 export class RoomsController {
+  async getRoomById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+
+      const result = await roomsService.getRoomById(
+        id
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      next(error)
+    }
+  }
+
   async getRooms(req: Request, res: Response, next: NextFunction) {
     try {
       const floorParam = req.query.floor;

@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import swaggerUi from "swagger-ui-express";
 
-import roomsRoutes from "./routes/rooms.routes";
+import bookingsRoutes from "./routes/bookings.routes";
 import { errorHandler } from "@shared-backend/middleware/error.middleware";
 
 dotenv.config({
@@ -23,12 +23,12 @@ app.use(express.json());
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.use("/api/rooms", roomsRoutes)
+app.use("/api/bookings", bookingsRoutes)
 
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT);
 
 app.listen(PORT, () => {
-  console.log(`RoomsService running on port ${PORT}`);
+  console.log(`BookingsService running on port ${PORT}`);
 });

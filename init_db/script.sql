@@ -55,16 +55,23 @@ CREATE TABLE IF NOT EXISTS meeting_room.rooms (
     room_name varchar(50) not null unique,
     floor tinyint unsigned not null,
     room smallint unsigned not null,
-    is_active boolean not null
+    is_active boolean not null,
+    capacity tinyint unsigned not null,
+    has_projector boolean not null,
+    has_tv boolean not null,
+    has_whiteboard boolean not null,
+    room_description text not null
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS meeting_room.booking (
     book_id int unsigned auto_increment primary key,
+    title text not null,
     organizer_id int unsigned not null,
     created_at datetime not null,
     room_id smallint unsigned not null,
-    started_at datetime not null,
-    ended_at datetime not null,
+    booking_date date not null,
+    started_at time not null,
+    ended_at time not null,
     booking_description text not null,
 
     foreign key (organizer_id) references meeting_room.persons (person_id) on delete cascade,
