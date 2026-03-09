@@ -1,1 +1,13 @@
-{}
+{
+  "name": "meeting-room-booking",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend/services/auth-service",
+    "backend/services/rooms-service",
+    "frontend"
+  ],
+  "scripts": {
+    "bootstrap": "npm install"
+  }
+}

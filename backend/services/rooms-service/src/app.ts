@@ -1,3 +1,4 @@
+import "module-alias/register";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -9,10 +10,10 @@ import roomsRoutes from "./routes/rooms.routes";
 import { errorHandler } from "@shared-backend/middleware/error.middleware";
 
 dotenv.config({
-  path: path.resolve(__dirname, "../../../shared/config/.env")
+  path: path.resolve(__dirname, "../../shared/config/.env")
 });
 
-const openapiPath = path.join(__dirname, "..", "openapi.json");
+const openapiPath = path.join(__dirname, "../..", "openapi.json");
 const swaggerDocument = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
 
 const app = express();
