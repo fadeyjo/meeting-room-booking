@@ -32,6 +32,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  
+  rooms-service:
+    build:
+      context: .
+      dockerfile: backend/services/rooms-service/Dockerfile
+    environment:
+      PORT: 5000
+      DATABASE_URL: mysql://app:app@db:3306/meeting_room
+    depends_on:
+      db:
+        condition: service_healthy
 
   frontend:
     build:
@@ -41,3 +52,4 @@ services:
       - "80:80"
     depends_on:
       - auth-service
+      - rooms-service

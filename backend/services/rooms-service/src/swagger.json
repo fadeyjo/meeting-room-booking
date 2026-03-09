@@ -1,0 +1,164 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Auth Service API",
+    "description": "API авторизации (регистрация, вход, выход, обновление токенов)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Регистрация",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "phoneNumber", "birth", "lastName", "firstName", "position", "password", "roleName"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "phoneNumber": { "type": "string", "example": "+79229060764" },
+                  "birth": { "type": "string", "format": "date", "example": "2004-02-08" },
+                  "lastName": { "type": "string" },
+                  "firstName": { "type": "string" },
+                  "patronymic": { "type": "string" },
+                  "position": { "type": "string", "enum": ["Программист", "Аналитик", "Конструктор", "Технолог"] },
+                  "password": { "type": "string", "minLength": 8 },
+                  "roleName": { "type": "string", "enum": ["User", "Admin"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tokens" }
+              }
+            }
+          },
+          "409": { "description": "Пользователь с таким email или телефоном уже существует" },
+          "404": { "description": "Роль или должность не найдены" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Вход",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tokens" }
+              }
+            }
+          },
+          "404": { "description": "Пользователь не найден" },
+          "401": { "description": "Неверный пароль" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Выход",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успех",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "personId": { "type": "integer" } }
+                }
+              }
+            }
+          },
+          "401": { "description": "Невалидный refresh token" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "summary": "Обновление токенов",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Новая пара токенов",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tokens" }
+              }
+            }
+          },
+          "401": { "description": "Невалидный или отозванный refresh token" },
+          "404": { "description": "Refresh token не найден" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Tokens": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

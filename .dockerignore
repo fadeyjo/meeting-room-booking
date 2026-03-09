@@ -3,6 +3,7 @@ node_modules
 .git
 frontend/dist
 backend/services/auth-service/dist
+backend/services/rooms-service/dist
 *.md
 .env
 .env.*

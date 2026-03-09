@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS meeting_room.rooms (
     room_id smallint unsigned auto_increment primary key,
     room_name varchar(50) not null unique,
     floor tinyint unsigned not null,
-    room smallint unsigned not null
+    room smallint unsigned not null,
+    is_active boolean not null
 ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS meeting_room.booking (

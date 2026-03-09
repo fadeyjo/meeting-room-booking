@@ -5,11 +5,113 @@ import {
   generateRefreshToken,
   verifyRefreshToken
 } from "@shared-backend/utils/jwt";
-import type { RegisterDto, TokensDto, LogoutedDto } from "@shared-types/types";
+import type { RegisterDto, TokensDto, LogoutedDto, RedactPersonDto, PersonDetail } from "@shared-types/types";
 import { HttpError } from "@shared-backend/utils/http-error";
 import { AccessTokenPayload } from "@shared-backend/utils/jwt";
 
 export class AuthService {
+  async searchUser(sub: string) {
+    const users = await prisma.person.findMany({
+      where: {
+        OR: [
+          { last_name: { contains: sub } },
+          { first_name: { contains: sub } },
+          { patronymic: { contains: sub } }
+        ]
+      }
+    });
+
+    return users;
+  }
+
+  async redactPerson(personData: RedactPersonDto, personId: number) {
+    let findedPerson =
+      await prisma.person
+        .findUnique({ where: { person_id: personId } })
+
+    if (!findedPerson)
+      throw new HttpError("Пользователь не найден", 404)
+
+    findedPerson =
+      await prisma.person
+        .findUnique({ where: { email: personData.email } })
+
+    if (findedPerson)
+      throw new HttpError("Пользователь с таким email уже существует", 409)
+
+    findedPerson =
+      await prisma.person
+        .findUnique({ where: { phone_number: personData.phoneNumber } })
+
+    if (findedPerson)
+      throw new HttpError("Пользователь с таким номером телефона уже существует", 409)
+  
+
+    const position = await prisma.position.findUnique({
+      where: { position: personData.position },
+    });
+    if (!position)
+      throw new HttpError("Позиция не найдена", 404);
+
+    const role = await prisma.role.findUnique({
+      where: { role_name: personData.roleName },
+    });
+    if (!role) throw new HttpError("Роль не найдена", 404);
+
+    const salt = await bcrypt.genSalt()
+    const hashedPassword = await bcrypt.hash(personData.password, salt);
+
+    const updatedPerson = await prisma.person.update({
+      where: { person_id: personId },
+      data: {
+        email: personData.email,
+        phone_number: personData.phoneNumber,
+        birth: new Date(personData.birth),
+        last_name: personData.lastName,
+        first_name: personData.firstName,
+        patronymic: personData.patronymic ?? null,
+        position_id: position.position_id,
+        hashed_password: hashedPassword,
+        role_id: role.role_id,
+        fired_at: personData.firedAt ? new Date(personData.firedAt) : null,
+      },
+    });
+
+    const result: PersonDetail = {
+      id: updatedPerson.person_id,
+      email: updatedPerson.email,
+      lastName: updatedPerson.last_name,
+      firstName: updatedPerson.first_name,
+      patronymic: updatedPerson.patronymic ?? null,
+      position: position.position,
+      role: role.role_name,
+      firedAt: updatedPerson.fired_at?.toISOString() ?? null,
+    };
+
+    return result;
+  }
+
+  async getAllUsers() {
+    const users = await prisma.person.findMany({
+      include: {
+        role: true,
+        position: true
+      }
+    });
+
+    const result: PersonDetail[] = users.map((user) => ({
+      id: user.person_id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      patronymic: user.patronymic ?? null,
+      position: user.position.position,
+      role: user.role.role_name,
+      firedAt: user.fired_at ? user.fired_at.toISOString() : null
+    }));
+
+    return result;
+  }
 
 async refresh(refreshToken: string) {
     let payload: AccessTokenPayload;
@@ -133,7 +235,7 @@ async refresh(refreshToken: string) {
         birth: new Date(data.birth),
         last_name: data.lastName,
         first_name: data.firstName,
-        patronymic: data.patronymic,
+        patronymic: data.patronymic ?? null,
         created_at: new Date(),
         hashed_password: hashedPassword,
         role_id: role.role_id,

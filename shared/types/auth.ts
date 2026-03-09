@@ -6,7 +6,7 @@ export interface RegisterDto {
   birth: string;
   lastName: string;
   firstName: string;
-  patronymic?: string;
+  patronymic?: string | null;
   position: string;
   password: string;
   roleName: string;
@@ -37,4 +37,28 @@ export interface LogoutedDto {
 export interface ApiError {
   title: string;
   statusCode: number;
+}
+
+export interface PersonDetail {
+  id: number,
+  email: string,
+  firstName: string,
+  lastName: string,
+  patronymic?: string | null,
+  position: string,
+  role: string,
+  firedAt?: string | null
+}
+
+export interface RedactPersonDto {
+  email: string;
+  phoneNumber: string;
+  birth: string;
+  lastName: string;
+  firstName: string;
+  patronymic?: string | null;
+  position: string;
+  password: string;
+  roleName: string;
+  firedAt?: string | null
 }
