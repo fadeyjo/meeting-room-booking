@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRoomsByDate, createBooking } from '../api/bookings';
+import { toHourlySlots } from '../utils/slots';
 import type { RoomWithSlots } from '@shared/types';
 
 export default function BookByDate() {
@@ -17,7 +18,7 @@ export default function BookByDate() {
 
   useEffect(() => {
     setLoading(true);
-    getRoomsByDate(date, accessToken).then(setData).finally(() => setLoading(false));
+    getRoomsByDate(date, accessToken).then((raw) => setData(raw.map(({ room, slots }) => ({ room, slots: toHourlySlots(slots) })))).finally(() => setLoading(false));
   }, [date, accessToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,23 +57,28 @@ export default function BookByDate() {
             <div key={room.id} className="bg-white rounded-xl border border-slate-200 p-4">
               <h3 className="font-medium text-slate-800 mb-2">{room.name}</h3>
               <div className="flex flex-wrap gap-2">
-                {slots.map((s) => (
-                  <button
-                    key={`${s.start_time}-${s.end_time}`}
-                    type="button"
-                    onClick={() => setSelected({ roomId: room.id, roomName: room.name, start: s.start_time, end: s.end_time })}
-                    className="px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100"
-                  >
-                    {s.start_time} – {s.end_time}
-                  </button>
-                ))}
+{slots.map((s) => (
+                    <button
+                      key={`${s.start_time}-${s.end_time}`}
+                      type="button"
+                      onClick={() => setSelected({ roomId: room.id, roomName: room.name, start: s.start_time, end: s.end_time })}
+                      className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100 border border-primary-100"
+                    >
+                      <span className="font-medium">{s.start_time} – {s.end_time}</span>
+                      <span className="text-primary-500 text-xs block mt-0.5">1 ч</span>
+                    </button>
+                  ))}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 max-w-md">
-          <p className="text-slate-600 text-sm">{selected.roomName}, {selected.start} – {selected.end}</p>
+          <p className="text-slate-600 text-sm mb-1">
+          <span className="font-medium text-slate-800">{selected.roomName}</span>
+          <span className="mx-1">·</span>
+          <span className="text-primary-600">{selected.start} – {selected.end}</span>
+        </p>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Название встречи *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-3 py-2 rounded-lg border border-slate-200" placeholder="Спринт-планнинг" />

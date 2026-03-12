@@ -1,5 +1,3 @@
-/** Разделяемые типы для backend и frontend */
-
 export interface RegisterDto {
   email: string;
   phoneNumber: string;

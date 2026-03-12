@@ -1,4 +1,3 @@
-// @ts-nocheck
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import type { StringValue } from "ms";
 

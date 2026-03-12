@@ -18,7 +18,7 @@ export class BookingsController {
   
           const result = await bookingsService.newBooking(newBookings, req.person.personId);
   
-          res.json(result);
+          res.status(201).json(result);
       }
       catch(err: any) {
           next(err)

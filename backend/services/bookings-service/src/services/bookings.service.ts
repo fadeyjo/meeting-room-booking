@@ -26,21 +26,24 @@ export class BookingsService {
         }
 
         if (this.parseTimeToMinutesFromString(newBooking.start_time) >= this.parseTimeToMinutesFromString(newBooking.end_time)) {
-            throw new HttpError("Дата окончания должна быть позже даты окончания", 400);
+            throw new HttpError("Время окончания должно быть позже времени начала", 400);
         }
 
         if (this.parseTimeToMinutesFromString(newBooking.start_time) < 480) {
-            throw new HttpError("Дата начала не раньше 8:00", 400);
+            throw new HttpError("Начало не раньше 8:00", 400);
         }
 
         if (this.parseTimeToMinutesFromString(newBooking.end_time) > 1020) {
-            throw new HttpError("Дата окончания не похже 17:00", 400);
+            throw new HttpError("Окончание не позже 17:00", 400);
         }
 
-        const intersection = await this.intersection(newBooking.date, newBooking.start_time, newBooking.end_time)
+        const intersection = await this.intersection(newBooking.room_id, newBooking.date, newBooking.start_time, newBooking.end_time);
 
         if (intersection)
-            throw new HttpError("Пересечние с другими бронями", 409);
+            throw new HttpError("Пересечение с другими бронями", 409);
+
+        const startedAt = this.timeStringToDate(newBooking.date, newBooking.start_time);
+        const endedAt = this.timeStringToDate(newBooking.date, newBooking.end_time);
 
         const response = await prisma.booking.create({
             data: {
@@ -48,10 +51,10 @@ export class BookingsService {
                 organizer_id: organizerId,
                 created_at: new Date(),
                 room_id: newBooking.room_id,
-                booking_date: newBooking.date,
-                started_at: newBooking.start_time,
-                ended_at: newBooking.end_time,
-                booking_description: newBooking.description
+                booking_date: new Date(newBooking.date),
+                started_at: startedAt,
+                ended_at: endedAt,
+                booking_description: newBooking.description ?? ""
             }
         })
 
@@ -62,9 +65,9 @@ export class BookingsService {
             title: response.title,
             description: response.booking_description,
             date: this.formatDateToYYYYMMDD(response.booking_date),
-            start_time: this.formatDateToHHMM(response.created_at),
+            start_time: this.formatDateToHHMM(response.started_at),
             end_time: this.formatDateToHHMM(response.ended_at),
-            status: "Лох",
+            status: "active",
             created_at: response.created_at.toISOString(),
         }
 
@@ -93,7 +96,7 @@ export class BookingsService {
           date: this.formatDateToYYYYMMDD(b.booking_date),
           start_time: this.formatDateToHHMM(b.started_at),
           end_time: this.formatDateToHHMM(b.ended_at),
-          status: "Лох",
+          status: "active",
           created_at: b.created_at.toISOString(),
         }));
       
@@ -115,9 +118,18 @@ export class BookingsService {
             where: {
                 OR: [
                     { organizer_id: personId },
-                    { invitations: { some: { guest_id: personId } } },
+                    {
+                        invitations: {
+                            some: {
+                                guest_id: personId,
+                                status: {
+                                    status_name: "Принято",
+                                },
+                            },
+                        },
+                    },
                 ],
-            }
+            },
         });
       
         const result: BookingDetail[] = bookings.map((b) => ({
@@ -129,7 +141,7 @@ export class BookingsService {
             date: this.formatDateToYYYYMMDD(b.booking_date),
             start_time: this.formatDateToHHMM(b.started_at),
             end_time: this.formatDateToHHMM(b.ended_at),
-            status: "Лох",
+            status: "active",
             created_at: b.created_at.toISOString(),
         }));
       
@@ -137,15 +149,35 @@ export class BookingsService {
     }
   
     async getBookingDetail(bookingId: number) {
-        let booking = await prisma.booking.findUnique(
-            {
-                where: { book_id : bookingId }
-            }
-        );
+        const booking = await prisma.booking.findUnique({
+            where: { book_id: bookingId },
+            include: {
+                room: true,
+                organizer: true,
+                invitations: {
+                    include: {
+                        guest: true,
+                        role: true,
+                        status: true,
+                    },
+                },
+            },
+        });
 
         if (!booking) {
             throw new HttpError("Бронирование не найдено", 404);
         }
+
+        const personBrief = (p: { person_id: number; first_name: string; last_name: string; patronymic: string | null }) => ({
+            id: p.person_id,
+            firstName: p.first_name,
+            lastName: p.last_name,
+            patronymic: p.patronymic ?? undefined,
+        });
+
+        const accepted = booking.invitations.filter((inv) => inv.status.status_name === "Принято");
+        const speakers = accepted.filter((inv) => inv.role.role_name === "Спикер").map((inv) => personBrief(inv.guest));
+        const listeners = accepted.filter((inv) => inv.role.role_name === "Слушатель").map((inv) => personBrief(inv.guest));
 
         const result: BookingDetail = {
             id: booking.book_id,
@@ -156,8 +188,22 @@ export class BookingsService {
             date: this.formatDateToYYYYMMDD(booking.booking_date),
             start_time: this.formatDateToHHMM(booking.started_at),
             end_time: this.formatDateToHHMM(booking.ended_at),
-            status: "Лох",
+            status: "active",
             created_at: booking.created_at.toISOString(),
+            room: {
+                id: booking.room.room_id,
+                name: booking.room.room_name,
+                floor: booking.room.floor,
+                capacity: booking.room.capacity,
+                has_projector: booking.room.has_projector,
+                has_tv: booking.room.has_tv,
+                has_whiteboard: booking.room.has_whiteboard,
+                is_active: booking.room.is_active,
+                description: booking.room.room_description,
+            },
+            creator: personBrief(booking.organizer),
+            speakers,
+            listeners,
         };
 
         return result;
@@ -270,25 +316,29 @@ export class BookingsService {
         return result;
     }
 
-    async intersection(date: string, startTime: string, endTime: string) {
-        const bookings = await prisma.booking.findMany(
-            {
-                where : { booking_date : date }
-            }
-        );
+    async intersection(roomId: number, date: string, startTime: string, endTime: string) {
+        const bookings = await prisma.booking.findMany({
+            where: {
+                room_id: roomId,
+                booking_date: new Date(date),
+            },
+        });
 
         const newBookStart = this.parseTimeToMinutesFromString(startTime);
         const newBookEnd = this.parseTimeToMinutesFromString(endTime);
 
-        for (let i = 0; i < bookings.length; i++) {
-            const start = this.parseTimeToMinutes(bookings[i].started_at.getHours(), bookings[i].started_at.getMinutes())
-            const end = this.parseTimeToMinutes(bookings[i].ended_at.getHours(), bookings[i].ended_at.getMinutes())
-
-            if (end > newBookStart || start < newBookEnd)
-                return true;
+        for (const b of bookings) {
+            const start = this.timeToMinutes(b.started_at);
+            const end = this.timeToMinutes(b.ended_at);
+            if (start < newBookEnd && end > newBookStart) return true;
         }
 
         return false;
+    }
+
+    timeStringToDate(dateYmd: string, time: string): Date {
+        const normalized = time.length === 5 ? `${time}:00` : time;
+        return new Date(`${dateYmd}T${normalized}`);
     }
 
     parseTimeToMinutes(hours: number, minutes: number) {

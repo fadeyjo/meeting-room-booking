@@ -10,8 +10,8 @@ const controller = new BookingsController();
 router.post("/", authenticateToken, validate(newBookingSchema), controller.newBooking);
 router.get("/my", authenticateToken, controller.getMyBookings);
 router.get("/my-meetings", authenticateToken, controller.getMyMeetings);
-router.get("/:id", authenticateToken, controller.getBookingDetail);
 router.get("/room/:id/slots", authenticateToken, controller.getFreeTimeSlotsByRoom);
 router.get("/by-date", authenticateToken, controller.getRoomsByFreeSlots);
+router.get("/:id", authenticateToken, controller.getBookingDetail);
 
 export default router;

@@ -45,14 +45,14 @@ export default function Invitations() {
                   {inv.message && <p className="text-slate-600 text-sm mt-1">{inv.message}</p>}
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {inv.status === 'ожидает' && (
+                  {inv.status.toLowerCase() === 'ожидает' && (
                     <>
                       <button type="button" onClick={() => handleAccept(inv.id)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700">Принять</button>
                       <button type="button" onClick={() => handleDecline(inv.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-sm hover:bg-slate-50">Отклонить</button>
                     </>
                   )}
-                  {inv.status === 'принято' && <span className="text-green-600 text-sm font-medium">Принято</span>}
-                  {inv.status === 'отклонено' && <span className="text-slate-500 text-sm">Отклонено</span>}
+                  {inv.status.toLowerCase() === 'принято' && <span className="text-green-600 text-sm font-medium">Принято</span>}
+                  {inv.status.toLowerCase() === 'отклонено' && <span className="text-slate-500 text-sm">Отклонено</span>}
                 </div>
               </div>
             </li>

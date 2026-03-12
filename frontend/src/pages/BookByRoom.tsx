@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRoom } from '../api/rooms';
 import { getSlotsByRoom, createBooking } from '../api/bookings';
+import { toHourlySlots } from '../utils/slots';
 import type { Room } from '@shared/types';
 
 export default function BookByRoom() {
@@ -25,7 +26,7 @@ export default function BookByRoom() {
 
   useEffect(() => {
     if (!id) return;
-    getSlotsByRoom(id, date, accessToken).then(setSlots);
+    getSlotsByRoom(id, date, accessToken).then((raw) => setSlots(toHourlySlots(raw)));
   }, [id, date, accessToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,16 +68,23 @@ export default function BookByRoom() {
                 key={`${s.start_time}-${s.end_time}`}
                 type="button"
                 onClick={() => setSelectedSlot({ start: s.start_time, end: s.end_time })}
-                className="px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100"
+                className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100 border border-primary-100"
               >
-                {s.start_time} – {s.end_time}
+                <span className="font-medium">{s.start_time} – {s.end_time}</span>
+                <span className="text-primary-500 text-xs block mt-0.5">1 ч</span>
               </button>
             ))}
           </div>
         </>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 max-w-md">
-          <p className="text-slate-600 text-sm">{room.name}, {date}, {selectedSlot.start} – {selectedSlot.end}</p>
+          <p className="text-slate-600 text-sm mb-1">
+            <span className="font-medium text-slate-800">{room.name}</span>
+            <span className="mx-1">·</span>
+            <span>{date}</span>
+            <span className="mx-1">·</span>
+            <span className="text-primary-600">{selectedSlot.start} – {selectedSlot.end}</span>
+          </p>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Название встречи *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-3 py-2 rounded-lg border border-slate-200" />

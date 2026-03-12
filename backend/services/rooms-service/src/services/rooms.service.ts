@@ -29,13 +29,18 @@ export class RoomsService {
     return result;
   }
 
-  async getRooms(floorIn: number, isActive: boolean) {
-    const rooms = await prisma.room.findMany({
-      where: {
-        floor: floorIn,
-        is_active: isActive,
-      },
-    });
+  async getRooms(floorIn?: number, isActive?: boolean) {
+    const where: any = {};
+
+    if (typeof floorIn === "number") {
+      where.floor = floorIn;
+    }
+
+    if (typeof isActive === "boolean") {
+      where.is_active = isActive;
+    }
+
+    const rooms = await prisma.room.findMany({ where });
 
     const result: RoomDetail[] = rooms.map((room: any) => ({
       id: room.room_id,

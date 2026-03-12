@@ -28,7 +28,7 @@ export const registerSchema = z.object({
 
   firstName: z.string().min(1, { message: "Имя обязательно" }),
 
-  patronymic: z.string().min(1, { message: "Отчество должно быть не пустым" }).optional().nullable(),
+  patronymic: z.string().optional().nullable(),
 
   position: z.string().min(1, { message: "Должность обязательна" }),
 

@@ -14,7 +14,10 @@ export interface InvitationDetail {
     role: string,
     message: string,
     status: string,
-    created_at: string
+    created_at: string,
+    firstName?: string,
+    lastName?: string,
+    patronymic?: string | null
 }
 
 export interface MyInviteDto {

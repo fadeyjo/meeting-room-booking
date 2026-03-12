@@ -4,6 +4,14 @@ import { HttpError } from "@shared-backend/utils/http-error";
 
 export class InvitationsService {
     async invite(data: InviteDto, iniciatorId: number) {
+        const roleNameNormalized = data.role.trim().toLowerCase();
+        let dbRoleName = data.role;
+
+        if (roleNameNormalized === "спикер") {
+            dbRoleName = "Спикер";
+        } else if (roleNameNormalized === "слушатель") {
+            dbRoleName = "Слушатель";
+        }
         let findedPer = await prisma.person.findUnique({
             where: { person_id: iniciatorId }
         })
@@ -29,7 +37,7 @@ export class InvitationsService {
         }
 
         let findedRole = await prisma.bookingRole.findUnique({
-            where: { role_name: data.role }
+            where: { role_name: dbRoleName }
         });
 
         if (!findedRole) {
@@ -52,7 +60,7 @@ export class InvitationsService {
             id: invitation.invitation_id,
             booking_id: invitation.book_id,
             user_id: invitation.guest_id,
-            role: data.role,
+            role: dbRoleName,
             message: invitation.invite_message,
             status: "Ожидает",
             created_at: invitation.invitation_on.toISOString()
@@ -61,7 +69,7 @@ export class InvitationsService {
         return res
     }
 
-    async myInvites(iniciatorId: number, status: string) {
+    async myInvites(iniciatorId: number, status?: string) {
         const findedPer = await prisma.person.findUnique({
             where: { person_id: iniciatorId }
         });
@@ -70,22 +78,40 @@ export class InvitationsService {
             throw new HttpError("Инициатор не найден", 404);
         }
 
-        const findedStatus = await prisma.invitationStatus.findUnique({
-            where: { status_name: status }
-        });
+        let statusFilterId: number | undefined;
 
-        if (!findedStatus) {
-            throw new HttpError("Статус не найден", 404);
+        if (status) {
+            const normalized = status.trim().toLowerCase();
+            let dbStatusName = status;
+
+            if (normalized === "ожидает") {
+                dbStatusName = "Ожидает";
+            } else if (normalized === "принято") {
+                dbStatusName = "Принято";
+            } else if (normalized === "отклонено") {
+                dbStatusName = "Отклонено";
+            }
+
+            const findedStatus = await prisma.invitationStatus.findUnique({
+                where: { status_name: dbStatusName }
+            });
+
+            if (!findedStatus) {
+                throw new HttpError("Статус не найден", 404);
+            }
+
+            statusFilterId = findedStatus.status_id;
         }
 
         const invites = await prisma.invitation.findMany({
             where: {
                 guest_id: iniciatorId,
-                status_id: findedStatus.status_id
+                ...(statusFilterId ? { status_id: statusFilterId } : {})
             },
             include: {
                 booking: true,
-                role: true
+                role: true,
+                status: true
             }
         });
 
@@ -93,7 +119,7 @@ export class InvitationsService {
             id: inv.invitation_id,
             role: inv.role.role_name,
             message: inv.invite_message,
-            status: status,
+            status: inv.status?.status_name ?? "Ожидает",
 
             booking: {
                 id: inv.booking.book_id,
@@ -104,7 +130,7 @@ export class InvitationsService {
                 date: this.formatDateToYYYYMMDD(inv.booking.booking_date),
                 start_time: this.formatDateToHHMM(inv.booking.started_at),
                 end_time: this.formatDateToHHMM(inv.booking.ended_at),
-                status: "Лох",
+                status: "active",
                 created_at: inv.booking.created_at.toISOString()
             }
         }));
@@ -125,8 +151,9 @@ export class InvitationsService {
             where: { book_id: bookingId },
             include: {
                 role: true,
-                status: true
-            }
+                status: true,
+                guest: true,
+            },
         });
 
         const result: InvitationDetail[] = invs.map((inv) => ({
@@ -136,7 +163,10 @@ export class InvitationsService {
             role: inv.role.role_name,
             message: inv.invite_message,
             status: inv.status.status_name,
-            created_at: inv.invitation_on.toISOString()
+            created_at: inv.invitation_on.toISOString(),
+            firstName: inv.guest.first_name,
+            lastName: inv.guest.last_name,
+            patronymic: inv.guest.patronymic ?? undefined,
         }));
 
         return result;
@@ -176,11 +206,15 @@ export class InvitationsService {
         });
     }
 
-    async redactRole(invitationId: number, role: string) {
-        let findedInv = await prisma.invitation.findUnique({
+    async redactRole(invitationId: number, role: string, requesterPersonId: number) {
+        const normalized = role.trim().toLowerCase();
+        const dbRoleName = normalized === "спикер" ? "Спикер" : normalized === "слушатель" ? "Слушатель" : role;
+
+        const findedInv = await prisma.invitation.findUnique({
             where: { invitation_id: invitationId },
             include: {
-                status: true
+                status: true,
+                booking: true,
             }
         });
 
@@ -188,8 +222,12 @@ export class InvitationsService {
             throw new HttpError("Приглашение не найдено", 404);
         }
 
-        let findedRole = await prisma.bookingRole.findUnique({
-            where: { role_name: role }
+        if (findedInv.booking.organizer_id !== requesterPersonId) {
+            throw new HttpError("Менять роль приглашённого может только организатор встречи", 403);
+        }
+
+        const findedRole = await prisma.bookingRole.findUnique({
+            where: { role_name: dbRoleName }
         });
 
         if (!findedRole) {
@@ -207,7 +245,7 @@ export class InvitationsService {
             id: data.invitation_id,
             booking_id: data.book_id,
             user_id: data.guest_id,
-            role: role,
+            role: dbRoleName,
             message: data.invite_message,
             status: findedInv.status.status_name,
             created_at: data.invitation_on.toISOString()

@@ -9,6 +9,13 @@ export interface NewBookingDto {
     end_time: string
 }
 
+export interface PersonBrief {
+    id: number,
+    firstName: string,
+    lastName: string,
+    patronymic?: string | null
+}
+
 export interface BookingDetail {
     id: number,
     room_id: number,
@@ -19,7 +26,11 @@ export interface BookingDetail {
     start_time: string,
     end_time: string,
     status: string,
-    created_at: string
+    created_at: string,
+    room?: RoomDetail,
+    creator?: PersonBrief,
+    speakers?: PersonBrief[],
+    listeners?: PersonBrief[]
 }
 
 export interface TimeSlot {

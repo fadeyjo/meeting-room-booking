@@ -20,17 +20,19 @@ function fakeJwtWithRole(roleId: number): string {
   return `${header}.${payload}.x`;
 }
 
-function decodeRole(accessToken: string): 'Admin' | 'User' {
+function decodePayload(accessToken: string): { role: 'Admin' | 'User'; personId: number | null } {
   try {
     const payload = accessToken.split('.')[1];
-    if (!payload) return 'User';
+    if (!payload) return { role: 'User', personId: null };
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    const data = JSON.parse(json) as { roleId?: number; role?: string; roleName?: string };
-    if (typeof data.roleId === 'number' && data.roleId === 2) return 'Admin';
-    const role = data.role ?? data.roleName ?? '';
-    return role === 'Admin' ? 'Admin' : 'User';
+    const data = JSON.parse(json) as { personId?: number; roleId?: number; role?: string; roleName?: string };
+    const role: 'Admin' | 'User' =
+      typeof data.roleId === 'number' && data.roleId === 2 ? 'Admin'
+      : (data.role ?? data.roleName ?? '') === 'Admin' ? 'Admin' : 'User';
+    const personId = typeof data.personId === 'number' ? data.personId : null;
+    return { role, personId };
   } catch {
-    return 'User';
+    return { role: 'User', personId: null };
   }
 }
 
@@ -39,6 +41,7 @@ interface AuthState {
   refreshToken: string | null;
   isReady: boolean;
   role: 'Admin' | 'User';
+  personId: number | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -53,18 +56,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(() => {
     const access = localStorage.getItem(ACCESS_KEY);
+    const decoded = access ? decodePayload(access) : { role: 'User' as const, personId: null };
     return {
       accessToken: access,
       refreshToken: localStorage.getItem(REFRESH_KEY),
       isReady: false,
-      role: access ? decodeRole(access) : 'User',
+      role: decoded.role,
+      personId: decoded.personId,
     };
   });
 
   const persistTokens = useCallback((access: string, refresh: string) => {
     localStorage.setItem(ACCESS_KEY, access);
     localStorage.setItem(REFRESH_KEY, refresh);
-    setState((s) => ({ ...s, accessToken: access, refreshToken: refresh, role: decodeRole(access) }));
+    const { role, personId } = decodePayload(access);
+    setState((s) => ({ ...s, accessToken: access, refreshToken: refresh, role, personId }));
   }, []);
 
   const clearTokens = useCallback(() => {
@@ -76,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       accessToken: null,
       refreshToken: null,
       role: 'User',
+      personId: null,
     }));
   }, []);
 

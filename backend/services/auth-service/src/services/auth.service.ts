@@ -9,19 +9,46 @@ import type { RegisterDto, TokensDto, LogoutedDto, RedactPersonDto, PersonDetail
 import { HttpError } from "@shared-backend/utils/http-error";
 import { AccessTokenPayload } from "@shared-backend/utils/jwt";
 
+type PersonWithRoleAndPosition = {
+  person_id: number;
+  email: string;
+  last_name: string;
+  first_name: string;
+  patronymic: string | null;
+  fired_at: Date | null;
+  role: { role_name: string };
+  position: { position: string };
+};
+
 export class AuthService {
   async searchUser(sub: string) {
     const users = await prisma.person.findMany({
       where: {
+        fired_at: null,
         OR: [
           { last_name: { contains: sub } },
           { first_name: { contains: sub } },
           { patronymic: { contains: sub } }
         ]
+      },
+      include: {
+        role: true,
+        position: true
       }
     });
 
-    return users;
+    const result: PersonDetail[] = users.map((user: PersonWithRoleAndPosition) => ({
+      id: user.person_id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      patronymic: user.patronymic,
+      position: user.position.position,
+      role: user.role.role_name,
+      firedAt: user.fired_at ? user.fired_at.toISOString() : null
+    }));
+
+    return result;
   }
 
   async redactPerson(personData: RedactPersonDto, personId: number) {
@@ -113,7 +140,7 @@ export class AuthService {
     return result;
   }
 
-async refresh(refreshToken: string) {
+  async refresh(refreshToken: string) {
     let payload: AccessTokenPayload;
 
     try {
@@ -197,17 +224,17 @@ async refresh(refreshToken: string) {
   async register(data: RegisterDto) {
     let findedPerson =
       await prisma.person
-        .findUnique({ where: { email: data.email } })
+        .findUnique({ where: { email: data.email } });
 
     if (findedPerson)
-      throw new HttpError("Пользователь с таким email уже существует", 409)
+      throw new HttpError("Пользователь с таким email уже существует", 409);
 
     findedPerson =
       await prisma.person
-        .findUnique({ where: { phone_number: data.phoneNumber } })
+        .findUnique({ where: { phone_number: data.phoneNumber } });
 
     if (findedPerson)
-      throw new HttpError("Пользователь с таким номером телефона уже существует", 409)
+      throw new HttpError("Пользователь с таким номером телефона уже существует", 409);
 
     const role =
       await prisma.role
@@ -218,10 +245,10 @@ async refresh(refreshToken: string) {
     const position =
       await prisma.position
         .findUnique({ where: { position: data.position } });
-    
+
     if (!position) throw new HttpError("Неизвестная должность", 404);
 
-    let salt = await bcrypt.genSalt();
+    const salt = await bcrypt.genSalt();
     const hashedPassword =
       await bcrypt.hash(
         data.password,
@@ -243,39 +270,16 @@ async refresh(refreshToken: string) {
       }
     });
 
-    const accessToken = generateAccessToken({
-      personId: person.person_id,
-      roleId: person.role_id
-    });
-
-    const refreshToken = generateRefreshToken({
-      personId: person.person_id,
-      roleId: person.role_id
-    });
-
-    salt = await bcrypt.genSalt();
-    const hashedToken =
-      await bcrypt.hash(
-        refreshToken,
-        salt
-      );
-
-    await prisma.refreshToken.create({
-      data: {
-        hashed_token: hashedToken,
-        person_id: person.person_id,
-        expires:
-          new Date(
-            Date.now() + Number(process.env.JWT_REFRESH_EXPIRE_D) * 2400000 * 36
-          ),
-        is_revoked: false
-      }
-    });
-
-    const response: TokensDto = {
-      accessToken: accessToken,
-      refreshToken: refreshToken
-    }
+    const response: PersonDetail = {
+      id: person.person_id,
+      email: person.email,
+      firstName: person.first_name,
+      lastName: person.last_name,
+      patronymic: person.patronymic,
+      position: position.position,
+      role: role.role_name,
+      firedAt: person.fired_at ? person.fired_at.toISOString() : null
+    };
 
     return response;
   }

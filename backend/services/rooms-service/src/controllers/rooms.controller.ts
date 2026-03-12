@@ -24,16 +24,23 @@ export class RoomsController {
       const floorParam = req.query.floor;
       const activeParam = req.query.is_active;
 
-      if (typeof floorParam !== "string") {
-        return next(new HttpError("Не передан этаж", 400));
+      let floor: number | undefined;
+      let isActive: boolean | undefined;
+
+      if (typeof floorParam === "string" && floorParam.trim() !== "") {
+        const parsedFloor = Number(floorParam);
+        if (Number.isNaN(parsedFloor)) {
+          return next(new HttpError("Некорректный этаж", 400));
+        }
+        floor = parsedFloor;
       }
-  
-      if (typeof activeParam !== "string") {
-        return next(new HttpError("Не передано состояние", 400));
+
+      if (typeof activeParam === "string" && activeParam.trim() !== "") {
+        if (activeParam !== "true" && activeParam !== "false") {
+          return next(new HttpError("Некорректное состояние", 400));
+        }
+        isActive = activeParam === "true";
       }
-  
-      const floor = Number(floorParam);
-      const isActive = activeParam === "true";
 
       const result = await roomsService.getRooms(
         floor,

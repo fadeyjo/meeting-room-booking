@@ -3,6 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getUsers, createUser, updateUser } from '../api/users';
 import type { User, CreateUserDto, UpdateUserDto } from '@shared/types';
 
+const POSITION_OPTIONS = ['Программист', 'Аналитик', 'Конструктор', 'Технолог'] as const;
+
 const emptyCreateForm: CreateUserDto = {
   email: '',
   phoneNumber: '',
@@ -10,7 +12,7 @@ const emptyCreateForm: CreateUserDto = {
   lastName: '',
   firstName: '',
   patronymic: '',
-  position: '',
+  position: POSITION_OPTIONS[0],
   password: '',
   roleName: 'User',
 };
@@ -147,7 +149,16 @@ export default function Admin() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Должность *</label>
-              <input value={form.position} required onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-200" placeholder="Программист, Аналитик..." />
+              <select
+                value={form.position}
+                required
+                onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200"
+              >
+                {POSITION_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Пароль *</label>
@@ -189,10 +200,25 @@ export default function Admin() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Отчество</label>
                 <input value={editForm.patronymic} onChange={(e) => setEditForm((f) => ({ ...f, patronymic: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-200" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Должность *</label>
-                <input value={editForm.position} required onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-200" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Должность *</label>
+              <select
+                value={editForm.position}
+                required
+                onChange={(e) => setEditForm((f) => ({ ...f, position: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200"
+              >
+                {(() => {
+                  const opts = [...POSITION_OPTIONS];
+                  if (editForm.position && !opts.includes(editForm.position as typeof POSITION_OPTIONS[number])) {
+                    opts.push(editForm.position as typeof POSITION_OPTIONS[number]);
+                  }
+                  return opts.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ));
+                })()}
+              </select>
+            </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Роль</label>
                 <select value={editForm.roleName} onChange={(e) => setEditForm((f) => ({ ...f, roleName: e.target.value as 'User' | 'Admin' }))} className="w-full px-3 py-2 rounded-lg border border-slate-200">

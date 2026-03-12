@@ -26,6 +26,7 @@
     "zod": "^4.3.6"
   },
   "_moduleAliases": {
+    "src": "dist/src",
     "@shared": "dist/shared",
     "@shared-backend": "dist/shared"
   },

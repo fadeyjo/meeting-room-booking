@@ -7,7 +7,7 @@ import { inviteSchema } from "src/validation/invitations.validation";
 const router = Router();
 const controller = new InvitationsController();
 
-router.post("/", authenticateToken, validate(inviteSchema), controller.accept);
+router.post("/", authenticateToken, validate(inviteSchema), controller.invite);
 router.get("/my", authenticateToken, controller.myInvites);
 router.get("/booking/:id", authenticateToken, controller.myInvitesByBooking);
 router.patch("/:id/accept", authenticateToken, controller.accept);

@@ -1,5 +1,3 @@
-/** Модели по OpenAPI для фронта */
-
 export interface User {
   id: number;
   email: string;
@@ -8,7 +6,6 @@ export interface User {
   patronymic?: string;
   position: string;
   role?: string;
-  /** дата увольнения; если задана — сотрудника нигде нельзя добавлять (в приглашения и т.п.) */
   firedAt?: string | null;
 }
 
@@ -24,7 +21,6 @@ export interface CreateUserDto {
   roleName: 'User' | 'Admin';
 }
 
-/** частичное обновление сотрудника (только админ); все поля опциональны */
 export interface UpdateUserDto {
   email?: string;
   phoneNumber?: string;
@@ -63,10 +59,18 @@ export interface Booking {
   created_at?: string;
 }
 
+export interface PersonBrief {
+  id: number;
+  firstName: string;
+  lastName: string;
+  patronymic?: string | null;
+}
+
 export interface BookingDetail extends Booking {
-  room: Room;
-  speakers: User[];
-  listeners: User[];
+  room?: Room;
+  creator?: PersonBrief;
+  speakers?: User[] | PersonBrief[];
+  listeners?: User[] | PersonBrief[];
 }
 
 export interface TimeSlot {

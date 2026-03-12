@@ -18,7 +18,7 @@ export class InvitationsController {
     
             const result = await invitationsService.invite(data, req.person.personId);
     
-            res.json(result);
+            res.status(201).json(result);
         }
         catch(err: any) {
             next(err)
@@ -33,13 +33,9 @@ export class InvitationsController {
                 return;
             }
 
-            if (!req.query.status)
-            {
-                next(new HttpError("Не передан статус", 400));
-                return;
-            }
+            const status = typeof req.query.status === "string" ? req.query.status : undefined;
     
-            const result = await invitationsService.myInvites(req.person.personId, req.query.status as string)
+            const result = await invitationsService.myInvites(req.person.personId, status)
     
             res.json(result);
         }
@@ -106,9 +102,14 @@ export class InvitationsController {
                 return;
             }
 
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+
             const { role }: RedactInvitationRole = req.body;
     
-            const result = await invitationsService.redactRole(Number(req.params.id), role);
+            const result = await invitationsService.redactRole(Number(req.params.id), role, req.person.personId);
     
             res.json(result);
         }
