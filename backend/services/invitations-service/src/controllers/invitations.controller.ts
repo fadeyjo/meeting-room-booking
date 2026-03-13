@@ -1,5 +1,5 @@
 import { HttpError } from "@shared-backend/utils/http-error";
-import { InviteDto, RedactInvitationRole } from "@shared-types/types/invitations";
+import { InviteDto, RedactInvitationRole, InvitationRequestDto } from "@shared-types/types/invitations";
 import { NextFunction, Request, Response } from "express";
 import { InvitationsService } from "src/services/invitations.service";
 
@@ -115,6 +115,90 @@ export class InvitationsController {
         }
         catch(err: any) {
             next(err)
+        }
+    }
+
+    async createRequest(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            const data: InvitationRequestDto = req.body;
+            const result = await invitationsService.createRequest(
+                { ...data, message: data.message ?? "" },
+                req.person.personId
+            );
+            res.status(201).json(result);
+        } catch (err: any) {
+            next(err);
+        }
+    }
+
+    async getIncomingRequests(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            const result = await invitationsService.getIncomingRequests(req.person.personId);
+            res.json(result);
+        } catch (err: any) {
+            next(err);
+        }
+    }
+
+    async getRequestsByBooking(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            const bookingId = Number(req.params.bookingId);
+            if (isNaN(bookingId)) {
+                next(new HttpError("Некорректный ID бронирования", 400));
+                return;
+            }
+            const result = await invitationsService.getRequestsByBooking(bookingId, req.person.personId);
+            res.json(result);
+        } catch (err: any) {
+            next(err);
+        }
+    }
+
+    async approveRequest(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            const id = Number(req.params.id);
+            if (isNaN(id)) {
+                next(new HttpError("Некорректный ID запроса", 400));
+                return;
+            }
+            await invitationsService.approveRequest(id, req.person.personId);
+            res.sendStatus(200);
+        } catch (err: any) {
+            next(err);
+        }
+    }
+
+    async rejectRequest(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            const id = Number(req.params.id);
+            if (isNaN(id)) {
+                next(new HttpError("Некорректный ID запроса", 400));
+                return;
+            }
+            await invitationsService.rejectRequest(id, req.person.personId);
+            res.sendStatus(200);
+        } catch (err: any) {
+            next(err);
         }
     }
 }

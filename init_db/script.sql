@@ -112,3 +112,22 @@ CREATE TABLE IF NOT EXISTS meeting_room.invitations (
     foreign key (role_id) references meeting_room.booking_roles (role_id) on delete cascade,
     foreign key (status_id) references meeting_room.invitations_status (status_id) on delete cascade
 );
+
+CREATE TABLE IF NOT EXISTS meeting_room.invitation_requests (
+    request_id int unsigned auto_increment primary key,
+    book_id int unsigned not null,
+    requested_by_id int unsigned not null,
+    guest_id int unsigned not null,
+    role_id tinyint unsigned not null,
+    invite_message text not null,
+    status varchar(50) not null default 'pending',
+    created_at datetime not null,
+    decided_at datetime null,
+    decided_by_id int unsigned null,
+
+    foreign key (book_id) references meeting_room.booking (book_id) on delete cascade,
+    foreign key (requested_by_id) references meeting_room.persons (person_id) on delete cascade,
+    foreign key (guest_id) references meeting_room.persons (person_id) on delete cascade,
+    foreign key (role_id) references meeting_room.booking_roles (role_id) on delete cascade,
+    foreign key (decided_by_id) references meeting_room.persons (person_id) on delete set null
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

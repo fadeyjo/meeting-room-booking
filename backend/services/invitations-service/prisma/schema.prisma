@@ -30,6 +30,9 @@ model Person {
 
   invitations_sent     Invitation[] @relation("InvitationInitiator")
   invitations_received Invitation[] @relation("InvitationGuest")
+  invitation_requests_made   InvitationRequest[] @relation("InvitationRequestRequester")
+  invitation_requests_guest InvitationRequest[] @relation("InvitationRequestGuest")
+  invitation_requests_decided InvitationRequest[] @relation("InvitationRequestDecidedBy")
 
   @@map("persons")
 }
@@ -96,6 +99,7 @@ model Booking {
   room      Room   @relation(fields: [room_id], references: [room_id])
 
   invitations Invitation[]
+  invitation_requests InvitationRequest[]
 
   @@map("booking")
 }
@@ -105,6 +109,7 @@ model BookingRole {
   role_name String @unique @db.VarChar(50)
 
   invitations Invitation[]
+  invitation_requests InvitationRequest[]
 
   @@map("booking_roles")
 }
@@ -135,4 +140,25 @@ model Invitation {
   status    InvitationStatus @relation(fields: [status_id], references: [status_id])
 
   @@map("invitations")
+}
+
+model InvitationRequest {
+  request_id     Int      @id @default(autoincrement()) @db.UnsignedInt
+  book_id        Int      @db.UnsignedInt
+  requested_by_id Int     @db.UnsignedInt
+  guest_id       Int      @db.UnsignedInt
+  role_id        Int      @db.UnsignedTinyInt
+  invite_message String  @db.Text
+  status         String  @db.VarChar(50)
+  created_at     DateTime
+  decided_at     DateTime?
+  decided_by_id  Int?     @db.UnsignedInt
+
+  booking      Booking     @relation(fields: [book_id], references: [book_id])
+  requested_by Person      @relation("InvitationRequestRequester", fields: [requested_by_id], references: [person_id])
+  guest        Person      @relation("InvitationRequestGuest", fields: [guest_id], references: [person_id])
+  role         BookingRole @relation(fields: [role_id], references: [role_id])
+  decided_by   Person?     @relation("InvitationRequestDecidedBy", fields: [decided_by_id], references: [person_id])
+
+  @@map("invitation_requests")
 }

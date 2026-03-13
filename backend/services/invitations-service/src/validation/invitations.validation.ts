@@ -19,3 +19,19 @@ export const inviteSchema = z.object({
     .string()
     .min(1, { message: "Введлите сообщение" }),
 });
+
+export const invitationRequestSchema = z.object({
+  booking_id: z
+    .number()
+    .int()
+    .positive(),
+
+  user_id: z
+    .number()
+    .int()
+    .positive(),
+
+  role: z.string().min(1),
+
+  message: z.string().optional().default(""),
+});

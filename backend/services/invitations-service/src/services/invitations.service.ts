@@ -1,4 +1,4 @@
-import { InvitationDetail, InviteDto, MyInviteDto } from "@shared-types/types/invitations";
+import { InvitationDetail, InviteDto, MyInviteDto, InvitationRequestDto, InvitationRequestItem } from "@shared-types/types/invitations";
 import prisma from "../config/prisma";
 import { HttpError } from "@shared-backend/utils/http-error";
 
@@ -28,12 +28,16 @@ export class InvitationsService {
             throw new HttpError("Гость не найден", 404);
         }
 
-        let findedBook = await prisma.booking.findUnique({
+        const findedBook = await prisma.booking.findUnique({
             where: { book_id: data.booking_id }
         });
 
         if (!findedBook) {
             throw new HttpError("Бронь не найдена", 404);
+        }
+
+        if (findedBook.organizer_id !== iniciatorId) {
+            throw new HttpError("Приглашать на встречу может только организатор", 403);
         }
 
         let findedRole = await prisma.bookingRole.findUnique({
@@ -252,6 +256,163 @@ export class InvitationsService {
         };
 
         return res;
+    }
+
+    async createRequest(data: InvitationRequestDto, requesterId: number) {
+        const dbRoleName = data.role.trim().toLowerCase() === "спикер" ? "Спикер" : data.role.trim().toLowerCase() === "слушатель" ? "Слушатель" : data.role;
+        const booking = await prisma.booking.findUnique({ where: { book_id: data.booking_id } });
+        if (!booking) throw new HttpError("Бронь не найдена", 404);
+        if (booking.organizer_id === requesterId) {
+            throw new HttpError("Организатор приглашает напрямую через раздел «Пригласить на встречу»", 400);
+        }
+        const acceptedStatus = await prisma.invitationStatus.findUnique({ where: { status_name: "Принято" } });
+        if (!acceptedStatus) throw new HttpError("Статус приглашения не найден", 500);
+        const acceptedInv = await prisma.invitation.findFirst({
+            where: {
+                book_id: data.booking_id,
+                guest_id: requesterId,
+                status_id: acceptedStatus.status_id
+            }
+        });
+        if (!acceptedInv) {
+            throw new HttpError("Запрос на приглашение могут отправлять только принявшие приглашение участники встречи", 403);
+        }
+        const guest = await prisma.person.findUnique({ where: { person_id: data.user_id } });
+        if (!guest) throw new HttpError("Гость не найден", 404);
+        const existingInv = await prisma.invitation.findFirst({
+            where: { book_id: data.booking_id, guest_id: data.user_id }
+        });
+        if (existingInv) throw new HttpError("Этот пользователь уже приглашён на встречу", 409);
+        const pendingRequest = await prisma.invitationRequest.findFirst({
+            where: { book_id: data.booking_id, guest_id: data.user_id, status: "pending" }
+        });
+        if (pendingRequest) throw new HttpError("Запрос на приглашение этого пользователя уже отправлен", 409);
+        const role = await prisma.bookingRole.findUnique({ where: { role_name: dbRoleName } });
+        if (!role) throw new HttpError("Роль не найдена", 404);
+        const req = await prisma.invitationRequest.create({
+            data: {
+                book_id: data.booking_id,
+                requested_by_id: requesterId,
+                guest_id: data.user_id,
+                role_id: role.role_id,
+                invite_message: data.message ?? "",
+                status: "pending",
+                created_at: new Date()
+            },
+            include: {
+                requested_by: true,
+                guest: true,
+                role: true,
+                booking: true
+            }
+        });
+        return this.toRequestItem(req);
+    }
+
+    toRequestItem(r: {
+        request_id: number;
+        book_id: number;
+        requested_by_id: number;
+        guest_id: number;
+        invite_message: string;
+        status: string;
+        created_at: Date;
+        decided_at: Date | null;
+        decided_by_id: number | null;
+        requested_by?: { first_name: string; last_name: string; patronymic: string | null };
+        guest?: { first_name: string; last_name: string; patronymic: string | null };
+        role?: { role_name: string };
+        booking?: { title: string };
+    }): InvitationRequestItem {
+        const requesterName = r.requested_by
+            ? [r.requested_by.last_name, r.requested_by.first_name, r.requested_by.patronymic].filter(Boolean).join(" ")
+            : "";
+        const guestName = r.guest
+            ? [r.guest.last_name, r.guest.first_name, r.guest.patronymic].filter(Boolean).join(" ")
+            : "";
+        return {
+            id: r.request_id,
+            booking_id: r.book_id,
+            requested_by_id: r.requested_by_id,
+            requested_by_name: requesterName,
+            guest_id: r.guest_id,
+            guest_name: guestName,
+            role: r.role?.role_name ?? "",
+            message: r.invite_message,
+            status: r.status as "pending" | "approved" | "rejected",
+            created_at: r.created_at.toISOString(),
+            decided_at: r.decided_at?.toISOString() ?? null
+        };
+    }
+
+    async getIncomingRequests(organizerId: number): Promise<InvitationRequestItem[]> {
+        const list = await prisma.invitationRequest.findMany({
+            where: {
+                status: "pending",
+                booking: { organizer_id: organizerId }
+            },
+            include: {
+                requested_by: true,
+                guest: true,
+                role: true,
+                booking: true
+            }
+        });
+        return list.map((r) => this.toRequestItem(r));
+    }
+
+    async getRequestsByBooking(bookingId: number, personId: number) {
+        const booking = await prisma.booking.findUnique({ where: { book_id: bookingId } });
+        if (!booking) throw new HttpError("Бронь не найдена", 404);
+        const isOrganizer = booking.organizer_id === personId;
+        const where: { book_id: number; requested_by_id?: number } = { book_id: bookingId };
+        if (!isOrganizer) where.requested_by_id = personId;
+        const list = await prisma.invitationRequest.findMany({
+            where,
+            include: { requested_by: true, guest: true, role: true, booking: true }
+        });
+        return list.map((r) => this.toRequestItem(r));
+    }
+
+    async approveRequest(requestId: number, personId: number) {
+        const req = await prisma.invitationRequest.findUnique({
+            where: { request_id: requestId },
+            include: { booking: true }
+        });
+        if (!req) throw new HttpError("Запрос не найден", 404);
+        if (req.status !== "pending") throw new HttpError("Запрос уже рассмотрен", 400);
+        if (req.booking.organizer_id !== personId) throw new HttpError("Подтверждать запрос может только организатор встречи", 403);
+        await prisma.$transaction([
+            prisma.invitationRequest.update({
+                where: { request_id: requestId },
+                data: { status: "approved", decided_at: new Date(), decided_by_id: personId }
+            }),
+            prisma.invitation.create({
+                data: {
+                    invitation_on: new Date(),
+                    initiator_id: personId,
+                    guest_id: req.guest_id,
+                    book_id: req.book_id,
+                    role_id: req.role_id,
+                    invite_message: req.invite_message,
+                    status_id: 1
+                }
+            })
+        ]);
+    }
+
+    async rejectRequest(requestId: number, personId: number) {
+        const req = await prisma.invitationRequest.findUnique({
+            where: { request_id: requestId },
+            include: { booking: true }
+        });
+        if (!req) throw new HttpError("Запрос не найден", 404);
+        if (req.status !== "pending") throw new HttpError("Запрос уже рассмотрен", 400);
+        if (req.booking.organizer_id !== personId) throw new HttpError("Отклонять запрос может только организатор встречи", 403);
+        await prisma.invitationRequest.update({
+            where: { request_id: requestId },
+            data: { status: "rejected", decided_at: new Date(), decided_by_id: personId }
+        });
     }
 
     parseTimeToMinutes(hours: number, minutes: number) {

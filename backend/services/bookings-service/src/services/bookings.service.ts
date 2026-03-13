@@ -209,85 +209,104 @@ export class BookingsService {
         return result;
     }
   
-    async getFreeTimeSlotsByRoom(roomId: number, date: string) {
+    async getOccupiedSlotsByRoom(roomId: number, date: string): Promise<TimeSlot[]> {
         const bookings = await prisma.booking.findMany({
-          where: {
-            room_id: roomId,
-            booking_date: new Date(date),
-          },
-          orderBy: {
-            started_at: "asc",
-          },
+            where: {
+                room_id: roomId,
+                booking_date: new Date(date),
+            },
+            orderBy: { started_at: "asc" },
         });
-    
+        return bookings.map((b) => ({
+            start_time: this.formatDateToHHMM(b.started_at),
+            end_time: this.formatDateToHHMM(b.ended_at),
+        }));
+    }
+
+    async getFreeTimeSlotsByRoom(roomId: number, date: string) {
+        const [freeSlots, occupied] = await Promise.all([
+            this.computeFreeSlotsForBookings(roomId, date),
+            this.getOccupiedSlotsByRoom(roomId, date),
+        ]);
+        return { free: freeSlots, occupied };
+    }
+
+    async computeFreeSlotsForBookings(roomId: number, date: string): Promise<TimeSlot[]> {
+        const bookings = await prisma.booking.findMany({
+            where: {
+                room_id: roomId,
+                booking_date: new Date(date),
+            },
+            orderBy: { started_at: "asc" },
+        });
+
         const WORK_START = 8 * 60;
         const WORK_END = 17 * 60;
-    
+
         let current = WORK_START;
-    
         const freeSlots: TimeSlot[] = [];
-    
+
         for (const b of bookings) {
             const start = this.timeToMinutes(b.started_at);
             const end = this.timeToMinutes(b.ended_at);
-        
+
             if (start > current) {
                 freeSlots.push({
-                  start_time: this.minutesToHHMM(current),
-                  end_time: this.minutesToHHMM(start),
+                    start_time: this.minutesToHHMM(current),
+                    end_time: this.minutesToHHMM(start),
                 });
             }
-      
             current = Math.max(current, end);
         }
-    
+
         if (current < WORK_END) {
             freeSlots.push({
-              start_time: this.minutesToHHMM(current),
-              end_time: this.minutesToHHMM(WORK_END),
+                start_time: this.minutesToHHMM(current),
+                end_time: this.minutesToHHMM(WORK_END),
             });
         }
-    
+
         return freeSlots;
     }
   
     async getRoomsFreeSlots(date: string) {
         const rooms = await prisma.room.findMany({
             include: {
-              bookings: {
-                where: {
-                  booking_date: new Date(date)
-                },
-                orderBy: {
-                  started_at: "asc"
+                bookings: {
+                    where: {
+                        booking_date: new Date(date)
+                    },
+                    orderBy: {
+                        started_at: "asc"
+                    }
                 }
-              }
             }
         });
-  
+
         const WORK_START = 8 * 60;
         const WORK_END = 17 * 60;
-  
+
         const result = rooms.map(room => {
-  
             let current = WORK_START;
-  
             const slots: TimeSlot[] = [];
-  
+            const occupied: TimeSlot[] = room.bookings.map((b) => ({
+                start_time: this.formatDateToHHMM(b.started_at),
+                end_time: this.formatDateToHHMM(b.ended_at),
+            }));
+
             for (const booking of room.bookings) {
                 const start = this.timeToMinutes(booking.started_at);
                 const end = this.timeToMinutes(booking.ended_at);
-          
+
                 if (start > current) {
                     slots.push({
                         start_time: this.minutesToHHMM(current),
                         end_time: this.minutesToHHMM(start)
                     });
                 }
-        
                 current = Math.max(current, end);
             }
-  
+
             if (current < WORK_END) {
                 slots.push({
                     start_time: this.minutesToHHMM(current),
@@ -307,12 +326,13 @@ export class BookingsService {
                     is_active: room.is_active,
                     description: room.room_description
                 },
-                slots
+                slots,
+                occupied,
             };
-  
-            return res
+
+            return res;
         });
-  
+
         return result;
     }
 

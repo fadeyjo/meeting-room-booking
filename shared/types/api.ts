@@ -81,6 +81,12 @@ export interface TimeSlot {
 export interface RoomWithSlots {
   room: Room;
   slots: TimeSlot[];
+  occupied?: TimeSlot[];
+}
+
+export interface SlotsByRoomResponse {
+  free: TimeSlot[];
+  occupied: TimeSlot[];
 }
 
 export interface Invitation {

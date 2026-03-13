@@ -3,25 +3,61 @@ export interface TimeSlotLike {
   end_time: string;
 }
 
-export function toHourlySlots(slots: TimeSlotLike[]): TimeSlotLike[] {
-  const result: TimeSlotLike[] = [];
-  for (const s of slots) {
-    const [sh, sm] = s.start_time.split(':').map(Number);
-    const [eh, em] = s.end_time.split(':').map(Number);
-    let startM = sh * 60 + (sm ?? 0);
-    const endM = eh * 60 + (em ?? 0);
-    while (startM + 60 <= endM) {
-      const h = Math.floor(startM / 60);
-      const m = startM % 60;
-      const nextM = startM + 60;
-      const nh = Math.floor(nextM / 60);
-      const nm = nextM % 60;
-      result.push({
-        start_time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
-        end_time: `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`,
-      });
-      startM = nextM;
-    }
+export function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+export function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export function isRangeOverlapping(startM: number, endM: number, occupied: TimeSlotLike[]): boolean {
+  return occupied.some((o) => {
+    const oStart = timeToMinutes(o.start_time);
+    const oEnd = timeToMinutes(o.end_time);
+    return startM < oEnd && endM > oStart;
+  });
+}
+
+export function isRangeWithinFree(startM: number, endM: number, free: TimeSlotLike[]): boolean {
+  return free.some((f) => {
+    const fStart = timeToMinutes(f.start_time);
+    const fEnd = timeToMinutes(f.end_time);
+    return startM >= fStart && endM <= fEnd;
+  });
+}
+
+const WEEKDAY_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+export function getBookingDateLimits(): { min: string; max: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const max = new Date(today);
+  max.setDate(max.getDate() + 14);
+  const toYMD = (d: Date) => d.toISOString().slice(0, 10);
+  return { min: toYMD(today), max: toYMD(max) };
+}
+
+export function getBookingDateOptions(): { value: string; label: string; isToday: boolean }[] {
+  const { min, max } = getBookingDateLimits();
+  const result: { value: string; label: string; isToday: boolean }[] = [];
+  const start = new Date(min + 'T12:00:00');
+  const end = new Date(max + 'T12:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const ymd = d.toISOString().slice(0, 10);
+    const dayNum = d.getDate();
+    const wd = WEEKDAY_SHORT[d.getDay()];
+    const isToday = d.getTime() === today.getTime();
+    result.push({
+      value: ymd,
+      label: isToday ? 'Сегодня' : `${dayNum} ${wd}`,
+      isToday,
+    });
   }
   return result;
 }

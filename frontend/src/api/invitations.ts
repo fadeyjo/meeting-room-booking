@@ -1,4 +1,5 @@
 import type { Invitation, InvitationWithBooking } from '@shared/types';
+import type { InvitationRequestItem } from '@shared/types/invitations';
 import { api } from './client';
 import { mocks } from './mocks';
 
@@ -65,4 +66,35 @@ export async function updateInvitationRole(
   } catch {
     return { id, booking_id: 0, user_id: 0, role, status: 'ожидает', created_at: new Date().toISOString() };
   }
+}
+
+export async function createInvitationRequest(
+  token: string | null,
+  body: { booking_id: number; user_id: number; role: 'спикер' | 'слушатель'; message?: string }
+): Promise<InvitationRequestItem> {
+  return api.post<InvitationRequestItem>('/api/invitations/request', body, token ?? undefined);
+}
+
+export async function getIncomingRequests(token: string | null): Promise<InvitationRequestItem[]> {
+  try {
+    return await api.get<InvitationRequestItem[]>('/api/invitations/requests/incoming', token ?? undefined);
+  } catch {
+    return [];
+  }
+}
+
+export async function getRequestsByBooking(bookingId: number, token: string | null): Promise<InvitationRequestItem[]> {
+  try {
+    return await api.get<InvitationRequestItem[]>(`/api/invitations/requests/booking/${bookingId}`, token ?? undefined);
+  } catch {
+    return [];
+  }
+}
+
+export async function approveInvitationRequest(id: number, token: string | null): Promise<void> {
+  await api.patch(`/api/invitations/requests/${id}/approve`, undefined, token ?? undefined);
+}
+
+export async function rejectInvitationRequest(id: number, token: string | null): Promise<void> {
+  await api.patch(`/api/invitations/requests/${id}/reject`, undefined, token ?? undefined);
 }

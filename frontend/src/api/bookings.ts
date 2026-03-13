@@ -1,4 +1,4 @@
-import type { Booking, BookingDetail, TimeSlot, RoomWithSlots } from '@shared/types';
+import type { Booking, BookingDetail, RoomWithSlots, SlotsByRoomResponse } from '@shared/types';
 import { api } from './client';
 import { mocks } from './mocks';
 
@@ -48,11 +48,11 @@ export async function getBooking(id: number, token: string | null): Promise<Book
   }
 }
 
-export async function getSlotsByRoom(roomId: number, date: string, token: string | null): Promise<TimeSlot[]> {
+export async function getSlotsByRoom(roomId: number, date: string, token: string | null): Promise<SlotsByRoomResponse> {
   try {
-    return await api.get<TimeSlot[]>(`/api/bookings/room/${roomId}/slots?date=${date}`, token ?? undefined);
+    return await api.get<SlotsByRoomResponse>(`/api/bookings/room/${roomId}/slots?date=${date}`, token ?? undefined);
   } catch {
-    return mocks.slots;
+    return { free: mocks.slots, occupied: [] };
   }
 }
 
