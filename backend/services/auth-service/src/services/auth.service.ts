@@ -52,55 +52,91 @@ export class AuthService {
   }
 
   async redactPerson(personData: RedactPersonDto, personId: number) {
-    let findedPerson =
-      await prisma.person
-        .findUnique({ where: { person_id: personId } })
-
-    if (!findedPerson)
-      throw new HttpError("Пользователь не найден", 404)
-
-    findedPerson =
-      await prisma.person
-        .findUnique({ where: { email: personData.email } })
-
-    if (findedPerson)
-      throw new HttpError("Пользователь с таким email уже существует", 409)
-
-    findedPerson =
-      await prisma.person
-        .findUnique({ where: { phone_number: personData.phoneNumber } })
-
-    if (findedPerson)
-      throw new HttpError("Пользователь с таким номером телефона уже существует", 409)
-  
-
-    const position = await prisma.position.findUnique({
-      where: { position: personData.position },
+    const currentPerson = await prisma.person.findUnique({
+      where: { person_id: personId },
+      include: {
+        position: true,
+        role: true,
+      },
     });
-    if (!position)
-      throw new HttpError("Позиция не найдена", 404);
 
-    const role = await prisma.role.findUnique({
-      where: { role_name: personData.roleName },
-    });
-    if (!role) throw new HttpError("Роль не найдена", 404);
+    if (!currentPerson) {
+      throw new HttpError("Пользователь не найден", 404);
+    }
 
-    const salt = await bcrypt.genSalt()
-    const hashedPassword = await bcrypt.hash(personData.password, salt);
+    if (personData.email && personData.email !== currentPerson.email) {
+      const emailOwner = await prisma.person.findFirst({
+        where: {
+          email: personData.email,
+          NOT: { person_id: personId },
+        },
+      });
+
+      if (emailOwner) {
+        throw new HttpError("Пользователь с таким email уже существует", 409);
+      }
+    }
+
+    if (personData.phoneNumber && personData.phoneNumber !== currentPerson.phone_number) {
+      const phoneOwner = await prisma.person.findFirst({
+        where: {
+          phone_number: personData.phoneNumber,
+          NOT: { person_id: personId },
+        },
+      });
+
+      if (phoneOwner) {
+        throw new HttpError("Пользователь с таким номером телефона уже существует", 409);
+      }
+    }
+
+    let position = currentPerson.position;
+    if (personData.position && personData.position !== currentPerson.position.position) {
+      const foundPosition = await prisma.position.findUnique({
+        where: { position: personData.position },
+      });
+      if (!foundPosition) {
+        throw new HttpError("Позиция не найдена", 404);
+      }
+      position = foundPosition;
+    }
+
+    let role = currentPerson.role;
+    if (personData.roleName && personData.roleName !== currentPerson.role.role_name) {
+      const foundRole = await prisma.role.findUnique({
+        where: { role_name: personData.roleName },
+      });
+      if (!foundRole) {
+        throw new HttpError("Роль не найдена", 404);
+      }
+      role = foundRole;
+    }
+
+    let hashedPassword: string | undefined;
+    if (personData.password && personData.password.trim().length > 0) {
+      const salt = await bcrypt.genSalt();
+      hashedPassword = await bcrypt.hash(personData.password, salt);
+    }
 
     const updatedPerson = await prisma.person.update({
       where: { person_id: personId },
       data: {
-        email: personData.email,
-        phone_number: personData.phoneNumber,
-        birth: new Date(personData.birth),
-        last_name: personData.lastName,
-        first_name: personData.firstName,
-        patronymic: personData.patronymic ?? null,
+        email: personData.email ?? currentPerson.email,
+        phone_number: personData.phoneNumber ?? currentPerson.phone_number,
+        birth: personData.birth ? new Date(personData.birth) : currentPerson.birth,
+        last_name: personData.lastName ?? currentPerson.last_name,
+        first_name: personData.firstName ?? currentPerson.first_name,
+        patronymic:
+          personData.patronymic !== undefined ? personData.patronymic : currentPerson.patronymic,
         position_id: position.position_id,
-        hashed_password: hashedPassword,
         role_id: role.role_id,
-        fired_at: personData.firedAt ? new Date(personData.firedAt) : null,
+        hashed_password: hashedPassword ?? currentPerson.hashed_password,
+        fired_at:
+          personData.firedAt !== undefined
+            ? personData.firedAt
+              ? new Date(personData.firedAt)
+              : null
+            : currentPerson.fired_at,
       },
     });
 
@@ -172,6 +208,14 @@ export class AuthService {
     }
 
     if (findedToken.is_revoked) {
+      throw new HttpError("Не авторизован", 401);
+    }
+
+    const person = await prisma.person.findUnique({
+      where: { person_id: payload.personId },
+    });
+
+    if (!person || person.fired_at) {
       throw new HttpError("Не авторизован", 401);
     }
 
@@ -291,6 +335,10 @@ export class AuthService {
 
     if (!person) {
       throw new HttpError("Пользователь не зарегистрирован", 404);
+    }
+
+    if (person.fired_at) {
+      throw new HttpError("Пользователь уволен", 403);
     }
 
     const valid = await bcrypt.compare(password, person.hashed_password);

@@ -49,14 +49,14 @@ export interface PersonDetail {
 }
 
 export interface RedactPersonDto {
-  email: string;
-  phoneNumber: string;
-  birth: string;
-  lastName: string;
-  firstName: string;
+  email?: string;
+  phoneNumber?: string;
+  birth?: string;
+  lastName?: string;
+  firstName?: string;
   patronymic?: string | null;
-  position: string;
-  password: string;
-  roleName: string;
-  firedAt?: string | null
+  position?: string;
+  password?: string;
+  roleName?: string;
+  firedAt?: string | null;
 }

@@ -45,38 +45,49 @@ export const logoutSchema = z.object({
   refreshToken: z.string().min(1, { message: "Токен обновления обязателен" }),
 });
 
-export const redactPersonSchema = z.object({
-  email: z
-    .string()
-    .refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
-      message: "Некорректный формат email",
-    }),
+export const redactPersonSchema = z
+  .object({
+    email: z
+      .string()
+      .refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+        message: "Некорректный формат email",
+      })
+      .optional(),
 
-  phoneNumber: z.string().min(1, { message: "Номер телефона обязателен" }),
+    phoneNumber: z.string().min(1, { message: "Номер телефона обязателен" }).optional(),
 
-  birth: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: "Некорректный формат даты рождения",
-    }),
+    birth: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)), {
+        message: "Некорректный формат даты рождения",
+      })
+      .optional(),
 
-  lastName: z.string().min(1, { message: "Фамилия обязательна" }),
+    lastName: z.string().min(1, { message: "Фамилия обязательна" }).optional(),
 
-  firstName: z.string().min(1, { message: "Имя обязательно" }),
+    firstName: z.string().min(1, { message: "Имя обязательно" }).optional(),
 
-  patronymic: z.string().trim().min(1, { message: "Отчество должно быть не пустым" }).optional().nullable(),
+    patronymic: z
+      .string()
+      .trim()
+      .min(1, { message: "Отчество должно быть не пустым" })
+      .optional()
+      .nullable(),
 
-  position: z.string().min(1, { message: "Должность обязательна" }),
+    position: z.string().min(1, { message: "Должность обязательна" }).optional(),
 
-  password: z.string().min(8, { message: "Пароль должен быть минимум 8 символов" }),
+    password: z.string().min(8, { message: "Пароль должен быть минимум 8 символов" }).optional(),
 
-  roleName: z.string().min(1, { message: "Роль обязательна" }),
+    roleName: z.string().min(1, { message: "Роль обязательна" }).optional(),
 
-  firedAt: z
-    .string()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: "Некорректный формат даты увольнения",
-    })
-    .optional()
-    .nullable(),
-});
+    firedAt: z
+      .string()
+      .refine((val) => !val || !isNaN(Date.parse(val)), {
+        message: "Некорректный формат даты увольнения",
+      })
+      .optional()
+      .nullable(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "Должен быть хотя бы один изменяемый параметр",
+  });
