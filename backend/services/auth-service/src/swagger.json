@@ -23,7 +23,7 @@
                   "lastName": { "type": "string" },
                   "firstName": { "type": "string" },
                   "patronymic": { "type": "string" },
-                  "position": { "type": "string", "enum": ["Программист", "Аналитик", "Конструктор", "Технолог"] },
+                  "position": { "type": "string", "enum": ["Программист", "Аналитик", "Конструктор", "Технолог", "Руководитель", "Тестировщик", "Менеджер"] },
                   "password": { "type": "string", "minLength": 8 },
                   "roleName": { "type": "string", "enum": ["User", "Admin"] }
                 }

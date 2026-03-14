@@ -12,7 +12,7 @@ INSERT INTO meeting_room.persons (
     'Системы',
     NULL,
     1,
-    '$2b$10$PNeSIN.oZJsLgbZevafF4OsFKbZoAPI5M1.5nmrugvYM.CSu849oW',
+    '$2b$10$BMGzoMKEvC/Ek/RUjV0JD.QYpb9UOjb.f9nbOjfagROuQKWQP70om',
     2,
     NULL
 );

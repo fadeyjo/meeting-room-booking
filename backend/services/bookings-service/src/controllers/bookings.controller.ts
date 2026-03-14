@@ -71,6 +71,24 @@ export class BookingsController {
           next(err)
       }
     }
+
+    async cancelBooking(req: Request, res: Response, next: NextFunction) {
+      try {
+          if (!req.person) {
+              next(new HttpError("Не авторизован", 401));
+              return;
+          }
+          const bookId = Number(req.params.id);
+          if (isNaN(bookId)) {
+              next(new HttpError("Некорректный ID бронирования", 400));
+              return;
+          }
+          await bookingsService.cancelBooking(bookId, req.person.personId);
+          res.sendStatus(200);
+      } catch (err: any) {
+          next(err);
+      }
+    }
   
     async getFreeTimeSlotsByRoom(req: Request, res: Response, next: NextFunction) {
       try {

@@ -30,5 +30,5 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT);
 
 app.listen(PORT, () => {
-  console.log(`AuthService running on port ${PORT}`);
+  console.log(`auth сервис слушает порт ${PORT}`);
 });

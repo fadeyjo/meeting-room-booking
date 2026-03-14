@@ -29,15 +29,52 @@ export class InvitationsService {
         }
 
         const findedBook = await prisma.booking.findUnique({
-            where: { book_id: data.booking_id }
+            where: { book_id: data.booking_id },
+            include: { room: true }
         });
 
         if (!findedBook) {
-            throw new HttpError("Бронь не найдена", 404);
+            throw new HttpError("Бронирование не найдено", 404);
         }
 
         if (findedBook.organizer_id !== iniciatorId) {
-            throw new HttpError("Приглашать на встречу может только организатор", 403);
+            throw new HttpError("Приглашать может только организатор", 403);
+        }
+
+        const meetingEnd = new Date(findedBook.booking_date);
+        const endTime = new Date(findedBook.ended_at);
+        meetingEnd.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds(), 0);
+        if (meetingEnd < new Date()) {
+            throw new HttpError("Нельзя приглашать на встречу, которая уже прошла", 400);
+        }
+
+        if (findedBook.organizer_id === data.user_id) {
+            throw new HttpError("Организатора приглашать не надо, он и так в встрече", 400);
+        }
+
+        const existingInvitation = await prisma.invitation.findFirst({
+            where: {
+                book_id: data.booking_id,
+                guest_id: data.user_id
+            },
+            include: { status: true }
+        });
+        if (existingInvitation) {
+            const st = existingInvitation.status?.status_name || "";
+            if (st === "Принято" || st === "Ожидает") {
+                throw new HttpError("Этот пользователь уже приглашён или уже в встрече", 400);
+            }
+        }
+
+        const acceptedCount = await prisma.invitation.count({
+            where: {
+                book_id: data.booking_id,
+                status: { status_name: "Принято" }
+            }
+        });
+        const totalParticipants = 1 + acceptedCount;
+        if (findedBook.room && totalParticipants >= findedBook.room.capacity) {
+            throw new HttpError("Переговорка заполнена", 400);
         }
 
         let findedRole = await prisma.bookingRole.findUnique({
@@ -177,8 +214,9 @@ export class InvitationsService {
     }
 
     async accept(invitationId: number) {
-        let findedInv = await prisma.invitation.findUnique({
-            where: { invitation_id: invitationId }
+        const findedInv = await prisma.invitation.findUnique({
+            where: { invitation_id: invitationId },
+            include: { booking: { include: { room: true } } }
         });
 
         if (!findedInv) {
@@ -187,14 +225,37 @@ export class InvitationsService {
 
         await prisma.invitation.update({
             where: { invitation_id: invitationId },
-            data: {
-                status_id: 2
-            }
+            data: { status_id: 2 }
         });
+
+        const room = findedInv.booking.room;
+        if (room) {
+            const acceptedCount = await prisma.invitation.count({
+                where: {
+                    book_id: findedInv.book_id,
+                    status: { status_name: "Принято" }
+                }
+            });
+            if (1 + acceptedCount >= room.capacity) {
+                const [pendingStatus, overflowDeclinedStatus] = await Promise.all([
+                    prisma.invitationStatus.findUnique({ where: { status_name: "Ожидает" } }),
+                    prisma.invitationStatus.findUnique({ where: { status_name: "Отменено (переполнение)" } })
+                ]);
+                if (pendingStatus && overflowDeclinedStatus) {
+                    await prisma.invitation.updateMany({
+                        where: {
+                            book_id: findedInv.book_id,
+                            status_id: pendingStatus.status_id
+                        },
+                        data: { status_id: overflowDeclinedStatus.status_id }
+                    });
+                }
+            }
+        }
     }
 
     async decline(invitationId: number) {
-        let findedInv = await prisma.invitation.findUnique({
+        const findedInv = await prisma.invitation.findUnique({
             where: { invitation_id: invitationId }
         });
 
@@ -204,9 +265,36 @@ export class InvitationsService {
 
         await prisma.invitation.update({
             where: { invitation_id: invitationId },
-            data: {
-                status_id: 3
-            }
+            data: { status_id: 3 }
+        });
+    }
+
+    async removeFromMeeting(invitationId: number, personId: number) {
+        const findedInv = await prisma.invitation.findUnique({
+            where: { invitation_id: invitationId },
+            include: { booking: true, status: true }
+        });
+
+        if (!findedInv) {
+            throw new HttpError("Приглашение не найдено", 404);
+        }
+
+        if (findedInv.booking.organizer_id !== personId) {
+            throw new HttpError("Удалять с встречи может только организатор", 403);
+        }
+
+        if (findedInv.status.status_name !== "Принято") {
+            throw new HttpError("Удалить можно только принявших приглашение", 400);
+        }
+
+        const declinedStatus = await prisma.invitationStatus.findUnique({ where: { status_name: "Отклонено" } });
+        if (!declinedStatus) {
+            throw new HttpError("Статус приглашения не найден", 500);
+        }
+
+        await prisma.invitation.update({
+            where: { invitation_id: invitationId },
+            data: { status_id: declinedStatus.status_id }
         });
     }
 
@@ -227,7 +315,7 @@ export class InvitationsService {
         }
 
         if (findedInv.booking.organizer_id !== requesterPersonId) {
-            throw new HttpError("Менять роль приглашённого может только организатор встречи", 403);
+            throw new HttpError("Менять роль может только организатор", 403);
         }
 
         const findedRole = await prisma.bookingRole.findUnique({
@@ -261,9 +349,15 @@ export class InvitationsService {
     async createRequest(data: InvitationRequestDto, requesterId: number) {
         const dbRoleName = data.role.trim().toLowerCase() === "спикер" ? "Спикер" : data.role.trim().toLowerCase() === "слушатель" ? "Слушатель" : data.role;
         const booking = await prisma.booking.findUnique({ where: { book_id: data.booking_id } });
-        if (!booking) throw new HttpError("Бронь не найдена", 404);
+        if (!booking) throw new HttpError("Бронирование не найдено", 404);
+        const meetingEnd = new Date(booking.booking_date);
+        const endTime = new Date(booking.ended_at);
+        meetingEnd.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds(), 0);
+        if (meetingEnd < new Date()) {
+            throw new HttpError("Встреча уже прошла", 400);
+        }
         if (booking.organizer_id === requesterId) {
-            throw new HttpError("Организатор приглашает напрямую через раздел «Пригласить на встречу»", 400);
+            throw new HttpError("Организатор приглашает через раздел «Пригласить»", 400);
         }
         const acceptedStatus = await prisma.invitationStatus.findUnique({ where: { status_name: "Принято" } });
         if (!acceptedStatus) throw new HttpError("Статус приглашения не найден", 500);
@@ -275,18 +369,21 @@ export class InvitationsService {
             }
         });
         if (!acceptedInv) {
-            throw new HttpError("Запрос на приглашение могут отправлять только принявшие приглашение участники встречи", 403);
+            throw new HttpError("запрос могут слать только те, кто уже в встрече", 403);
         }
         const guest = await prisma.person.findUnique({ where: { person_id: data.user_id } });
         if (!guest) throw new HttpError("Гость не найден", 404);
+        if (data.user_id === booking.organizer_id) {
+            throw new HttpError("Организатора приглашать запросом не надо", 400);
+        }
         const existingInv = await prisma.invitation.findFirst({
             where: { book_id: data.booking_id, guest_id: data.user_id }
         });
-        if (existingInv) throw new HttpError("Этот пользователь уже приглашён на встречу", 409);
+        if (existingInv) throw new HttpError("Этот пользователь уже приглашён", 409);
         const pendingRequest = await prisma.invitationRequest.findFirst({
             where: { book_id: data.booking_id, guest_id: data.user_id, status: "pending" }
         });
-        if (pendingRequest) throw new HttpError("Запрос на приглашение этого пользователя уже отправлен", 409);
+        if (pendingRequest) throw new HttpError("Запрос на этого пользователя уже отправлен", 409);
         const role = await prisma.bookingRole.findUnique({ where: { role_name: dbRoleName } });
         if (!role) throw new HttpError("Роль не найдена", 404);
         const req = await prisma.invitationRequest.create({
@@ -363,7 +460,7 @@ export class InvitationsService {
 
     async getRequestsByBooking(bookingId: number, personId: number) {
         const booking = await prisma.booking.findUnique({ where: { book_id: bookingId } });
-        if (!booking) throw new HttpError("Бронь не найдена", 404);
+        if (!booking) throw new HttpError("Бронирование не найдено", 404);
         const isOrganizer = booking.organizer_id === personId;
         const where: { book_id: number; requested_by_id?: number } = { book_id: bookingId };
         if (!isOrganizer) where.requested_by_id = personId;
@@ -377,11 +474,25 @@ export class InvitationsService {
     async approveRequest(requestId: number, personId: number) {
         const req = await prisma.invitationRequest.findUnique({
             where: { request_id: requestId },
-            include: { booking: true }
+            include: { booking: { include: { room: true } } }
         });
         if (!req) throw new HttpError("Запрос не найден", 404);
         if (req.status !== "pending") throw new HttpError("Запрос уже рассмотрен", 400);
-        if (req.booking.organizer_id !== personId) throw new HttpError("Подтверждать запрос может только организатор встречи", 403);
+        if (req.booking.organizer_id !== personId) throw new HttpError("Подтверждать может только организатор", 403);
+
+        const room = req.booking.room;
+        if (room) {
+            const acceptedCount = await prisma.invitation.count({
+                where: {
+                    book_id: req.book_id,
+                    status: { status_name: "Принято" }
+                }
+            });
+            if (1 + acceptedCount >= room.capacity) {
+                throw new HttpError("Переговорка заполнена", 400);
+            }
+        }
+
         await prisma.$transaction([
             prisma.invitationRequest.update({
                 where: { request_id: requestId },
@@ -408,7 +519,7 @@ export class InvitationsService {
         });
         if (!req) throw new HttpError("Запрос не найден", 404);
         if (req.status !== "pending") throw new HttpError("Запрос уже рассмотрен", 400);
-        if (req.booking.organizer_id !== personId) throw new HttpError("Отклонять запрос может только организатор встречи", 403);
+        if (req.booking.organizer_id !== personId) throw new HttpError("Отклонять может только организатор", 403);
         await prisma.invitationRequest.update({
             where: { request_id: requestId },
             data: { status: "rejected", decided_at: new Date(), decided_by_id: personId }

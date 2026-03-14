@@ -25,55 +25,51 @@ export default function Login() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center py-8">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-        <h1 className="text-2xl font-bold text-slate-800 mb-1">Вход</h1>
-        <p className="text-slate-500 text-sm mb-6">Войдите в аккаунт для бронирования</p>
+    <div className="flex flex-1 items-center justify-center py-12">
+      <div className="w-full max-w-md animate-slide-up">
+        <div className="card p-8 sm:p-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary-200/30 -translate-y-1/2 translate-x-1/2" aria-hidden />
+          <h1 className="page-title text-2xl relative">Вход</h1>
+          <p className="page-subtitle mb-8 relative">Войдите в аккаунт для бронирования переговорок</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
-              {error}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+                {error}
+              </div>
+            )}
+            <div>
+              <label htmlFor="email" className="input-label">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                className="w-full"
+              />
             </div>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-              Пароль
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition"
-              placeholder="••••••••"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 transition"
-          >
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
-        </form>
-
+            <div>
+              <label htmlFor="password" className="input-label">Пароль</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3 text-base"
+            >
+              {loading ? 'Вход...' : 'Войти'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

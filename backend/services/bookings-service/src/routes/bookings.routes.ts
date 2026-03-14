@@ -12,6 +12,7 @@ router.get("/my", authenticateToken, controller.getMyBookings);
 router.get("/my-meetings", authenticateToken, controller.getMyMeetings);
 router.get("/room/:id/slots", authenticateToken, controller.getFreeTimeSlotsByRoom);
 router.get("/by-date", authenticateToken, controller.getRoomsByFreeSlots);
+router.delete("/:id", authenticateToken, controller.cancelBooking);
 router.get("/:id", authenticateToken, controller.getBookingDetail);
 
 export default router;

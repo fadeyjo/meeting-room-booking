@@ -20,8 +20,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isReady } = useAuth();
   if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-pulse text-primary-600 font-medium">Загрузка...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
+        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
+        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
       </div>
     );
   }
@@ -33,8 +34,9 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
   const { isAdmin, isReady } = useAuth();
   if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-pulse text-primary-600 font-medium">Загрузка...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
+        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
+        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
       </div>
     );
   }
@@ -46,8 +48,9 @@ function PublicOnly({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isReady } = useAuth();
   if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-pulse text-primary-600 font-medium">Загрузка...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
+        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
+        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
       </div>
     );
   }

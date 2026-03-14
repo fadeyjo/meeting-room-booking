@@ -30,5 +30,5 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT);
 
 app.listen(PORT, () => {
-  console.log(`BookingsService running on port ${PORT}`);
+  console.log(`bookings сервис слушает порт ${PORT}`);
 });

@@ -1,16 +1,25 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+const navItems = [
+  { to: '/', label: 'Главная' },
+  { to: '/meetings', label: 'Мои встречи' },
+  { to: '/book/by-date', label: 'По дате' },
+  { to: '/book/by-room', label: 'По комнате' },
+  { to: '/invite', label: 'Пригласить' },
+  { to: '/invitations', label: 'Приглашения' },
+];
+
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   const location = useLocation();
   const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
   return (
     <Link
       to={to}
-      className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`block rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ${
         isActive
-          ? 'bg-primary-100 text-primary-800'
-          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+          ? 'bg-primary-600 text-white shadow-soft'
+          : 'text-ink-secondary hover:bg-slate-100 hover:text-ink-primary'
       }`}
     >
       {children}
@@ -28,50 +37,51 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <header className="bg-white border-b border-slate-200 shrink-0">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col bg-surface">
+      <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200/80 bg-white/90 backdrop-blur-md shadow-soft">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link
             to="/"
-            className="text-xl font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+            className="text-xl font-bold tracking-tight text-primary-600 transition-colors hover:text-primary-700"
           >
             Переговорные
           </Link>
-          {!isAuthenticated && (
-            <Link
-              to="/login"
-              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-            >
-              Вход
-            </Link>
-          )}
-          {isAuthenticated && (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-slate-600 hover:text-slate-900 text-sm font-medium"
-            >
-              Выйти
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {!isAuthenticated && (
+              <Link
+                to="/login"
+                className="btn-primary px-5 py-2.5 text-sm"
+              >
+                Вход
+              </Link>
+            )}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn-ghost text-sm"
+              >
+                Выйти
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 flex max-w-5xl w-full mx-auto gap-6 px-4 py-6">
+      <div className="flex flex-1 gap-8 px-4 py-8 sm:px-6 mx-auto w-full max-w-5xl">
         {isAuthenticated && (
-          <aside className="w-48 shrink-0">
-            <nav className="sticky top-6 flex flex-col gap-0.5">
-              <NavLink to="/">Главная</NavLink>
-              <NavLink to="/meetings">Мои встречи</NavLink>
-              <NavLink to="/book/by-date">Бронировать по дате</NavLink>
-              <NavLink to="/book/by-room">Бронировать по комнате</NavLink>
-              <NavLink to="/invite">Пригласить на встречу</NavLink>
-              <NavLink to="/invitations">Приглашения</NavLink>
-              {isAdmin && <NavLink to="/admin">Админ</NavLink>}
+          <aside className="w-52 shrink-0">
+            <nav className="sticky top-24 flex flex-col gap-1">
+              {navItems.map(({ to, label }) => (
+                <NavLink key={to} to={to}>{label}</NavLink>
+              ))}
+              {isAdmin && (
+                <NavLink to="/admin">Админ</NavLink>
+              )}
             </nav>
           </aside>
         )}
-        <main className="flex-1 min-w-0">
+        <main className="min-w-0 flex-1 animate-fade-in">
           <Outlet />
         </main>
       </div>

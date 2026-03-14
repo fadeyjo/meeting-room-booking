@@ -30,5 +30,5 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT);
 
 app.listen(PORT, () => {
-  console.log(`InvitationsService running on port ${PORT}`);
+  console.log(`invitations сервис слушает порт ${PORT}`);
 });

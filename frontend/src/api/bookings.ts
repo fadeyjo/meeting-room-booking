@@ -48,6 +48,10 @@ export async function getBooking(id: number, token: string | null): Promise<Book
   }
 }
 
+export async function cancelBooking(id: number, token: string | null): Promise<void> {
+  await api.delete(`/api/bookings/${id}`, token ?? undefined);
+}
+
 export async function getSlotsByRoom(roomId: number, date: string, token: string | null): Promise<SlotsByRoomResponse> {
   try {
     return await api.get<SlotsByRoomResponse>(`/api/bookings/room/${roomId}/slots?date=${date}`, token ?? undefined);

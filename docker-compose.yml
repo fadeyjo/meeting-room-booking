@@ -33,7 +33,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  
+
+  seed-users:
+    image: node:20-alpine
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:5000
+      BOOKINGS_SERVICE_URL: http://bookings-service:5000
+      ROOMS_SERVICE_URL: http://rooms-service:5000
+      INVITATIONS_SERVICE_URL: http://invitations-service:5000
+      ADMIN_EMAIL: admin@mail.ru
+      ADMIN_PASSWORD: admin-777
+    volumes:
+      - ./scripts:/scripts:ro
+    working_dir: /scripts
+    command: node seed-users.js
+    depends_on:
+      - auth-service
+      - bookings-service
+      - rooms-service
+      - invitations-service
+    restart: "no"
+
   rooms-service:
     build:
       context: .

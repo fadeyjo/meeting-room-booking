@@ -17,6 +17,7 @@ router.patch("/requests/:id/reject", authenticateToken, controller.rejectRequest
 router.get("/booking/:id", authenticateToken, controller.myInvitesByBooking);
 router.patch("/:id/accept", authenticateToken, controller.accept);
 router.patch("/:id/decline", authenticateToken, controller.decline);
+router.patch("/:id/remove", authenticateToken, controller.removeFromMeeting);
 router.patch("/:id", authenticateToken, controller.redactRole);
 
 export default router;

@@ -56,6 +56,10 @@ export async function declineInvitation(id: number, token: string | null): Promi
   }
 }
 
+export async function removeFromMeeting(id: number, token: string | null): Promise<void> {
+  await api.patch(`/api/invitations/${id}/remove`, undefined, token ?? undefined);
+}
+
 export async function updateInvitationRole(
   id: number,
   role: 'спикер' | 'слушатель',

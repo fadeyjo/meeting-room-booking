@@ -80,25 +80,38 @@ export class InvitationsController {
 
     async decline(req: Request, res: Response, next: NextFunction) {
         try {
-            if (!req.params.id)
-            {
+            if (!req.params.id) {
                 next(new HttpError("Не передан id приглашения", 400));
                 return;
             }
-    
             await invitationsService.decline(Number(req.params.id));
-    
             res.sendStatus(200);
+        } catch (err: any) {
+            next(err);
         }
-        catch(err: any) {
-            next(err)
+    }
+
+    async removeFromMeeting(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.params.id) {
+                next(new HttpError("Не передан id приглашения", 400));
+                return;
+            }
+            if (!req.person) {
+                next(new HttpError("Не авторизован", 401));
+                return;
+            }
+            await invitationsService.removeFromMeeting(Number(req.params.id), req.person.personId);
+            res.sendStatus(200);
+        } catch (err: any) {
+            next(err);
         }
     }
 
     async redactRole(req: Request, res: Response, next: NextFunction) {
         try {
             if (!req.params.id) {
-                next(new HttpError("Не передано id приглашения", 400));
+                next(new HttpError("не передано id приглашения", 400));
                 return;
             }
 

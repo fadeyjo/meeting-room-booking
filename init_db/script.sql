@@ -10,7 +10,10 @@ INSERT INTO meeting_room.positions (position) VALUES
     ('Программист'),
     ('Аналитик'),
     ('Конструктор'),
-    ('Технолог');
+    ('Технолог'),
+    ('Руководитель'),
+    ('Тестировщик'),
+    ('Менеджер');
 
 CREATE TABLE IF NOT EXISTS meeting_room.roles (
     role_id tinyint unsigned auto_increment primary key,
@@ -94,7 +97,8 @@ CREATE TABLE IF NOT EXISTS meeting_room.invitations_status (
 INSERT INTO meeting_room.invitations_status (status_name) VALUES
     ('Ожидает'),
     ('Принято'),
-    ('Отклонено');
+    ('Отклонено'),
+    ('Отменено (переполнение)');
 
 CREATE TABLE IF NOT EXISTS meeting_room.invitations (
     invitation_id int unsigned auto_increment primary key,

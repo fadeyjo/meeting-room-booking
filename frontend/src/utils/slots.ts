@@ -31,28 +31,31 @@ export function isRangeWithinFree(startM: number, endM: number, free: TimeSlotLi
 }
 
 const WEEKDAY_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const TZ_MOSCOW = 'Europe/Moscow';
+
+function getTodayMSK(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: TZ_MOSCOW });
+}
 
 export function getBookingDateLimits(): { min: string; max: string } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const max = new Date(today);
-  max.setDate(max.getDate() + 14);
-  const toYMD = (d: Date) => d.toISOString().slice(0, 10);
-  return { min: toYMD(today), max: toYMD(max) };
+  const min = getTodayMSK();
+  const d = new Date(min + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 14);
+  const max = d.toISOString().slice(0, 10);
+  return { min, max };
 }
 
 export function getBookingDateOptions(): { value: string; label: string; isToday: boolean }[] {
   const { min, max } = getBookingDateLimits();
   const result: { value: string; label: string; isToday: boolean }[] = [];
-  const start = new Date(min + 'T12:00:00');
-  const end = new Date(max + 'T12:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+  const todayMSK = getTodayMSK();
+  const start = new Date(min + 'T12:00:00Z');
+  const end = new Date(max + 'T12:00:00Z');
+  for (const d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
     const ymd = d.toISOString().slice(0, 10);
-    const dayNum = d.getDate();
-    const wd = WEEKDAY_SHORT[d.getDay()];
-    const isToday = d.getTime() === today.getTime();
+    const dayNum = d.getUTCDate();
+    const wd = WEEKDAY_SHORT[d.getUTCDay()];
+    const isToday = ymd === todayMSK;
     result.push({
       value: ymd,
       label: isToday ? 'Сегодня' : `${dayNum} ${wd}`,

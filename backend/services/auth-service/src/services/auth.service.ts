@@ -73,7 +73,7 @@ export class AuthService {
       });
 
       if (emailOwner) {
-        throw new HttpError("Пользователь с таким email уже существует", 409);
+        throw new HttpError("такой email уже занят", 409);
       }
     }
 
@@ -86,7 +86,7 @@ export class AuthService {
       });
 
       if (phoneOwner) {
-        throw new HttpError("Пользователь с таким номером телефона уже существует", 409);
+        throw new HttpError("Такой номер уже занят", 409);
       }
     }
 
@@ -271,14 +271,14 @@ export class AuthService {
         .findUnique({ where: { email: data.email } });
 
     if (findedPerson)
-      throw new HttpError("Пользователь с таким email уже существует", 409);
+      throw new HttpError("такой email уже занят", 409);
 
     findedPerson =
       await prisma.person
         .findUnique({ where: { phone_number: data.phoneNumber } });
 
     if (findedPerson)
-      throw new HttpError("Пользователь с таким номером телефона уже существует", 409);
+      throw new HttpError("Такой номер уже занят", 409);
 
     const role =
       await prisma.role
@@ -290,7 +290,7 @@ export class AuthService {
       await prisma.position
         .findUnique({ where: { position: data.position } });
 
-    if (!position) throw new HttpError("Неизвестная должность", 404);
+    if (!position) throw new HttpError("неизвестная должность", 404);
 
     const salt = await bcrypt.genSalt();
     const hashedPassword =
@@ -334,7 +334,7 @@ export class AuthService {
     });
 
     if (!person) {
-      throw new HttpError("Пользователь не зарегистрирован", 404);
+      throw new HttpError("Такой пользователь не зарегистрирован", 404);
     }
 
     if (person.fired_at) {

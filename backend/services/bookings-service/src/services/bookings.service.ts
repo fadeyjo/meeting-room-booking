@@ -26,7 +26,7 @@ export class BookingsService {
         }
 
         if (this.parseTimeToMinutesFromString(newBooking.start_time) >= this.parseTimeToMinutesFromString(newBooking.end_time)) {
-            throw new HttpError("Время окончания должно быть позже времени начала", 400);
+            throw new HttpError("Конец должен быть позже начала", 400);
         }
 
         if (this.parseTimeToMinutesFromString(newBooking.start_time) < 480) {
@@ -40,7 +40,7 @@ export class BookingsService {
         const intersection = await this.intersection(newBooking.room_id, newBooking.date, newBooking.start_time, newBooking.end_time);
 
         if (intersection)
-            throw new HttpError("Пересечение с другими бронями", 409);
+            throw new HttpError("пересечение с другими бронями", 409);
 
         const startedAt = this.timeStringToDate(newBooking.date, newBooking.start_time);
         const endedAt = this.timeStringToDate(newBooking.date, newBooking.end_time);
@@ -207,6 +207,21 @@ export class BookingsService {
         };
 
         return result;
+    }
+
+    async cancelBooking(bookingId: number, personId: number) {
+        const booking = await prisma.booking.findUnique({
+            where: { book_id: bookingId }
+        });
+        if (!booking) {
+            throw new HttpError("Бронирование не найдено", 404);
+        }
+        if (booking.organizer_id !== personId) {
+            throw new HttpError("Отменить может только организатор", 403);
+        }
+        await prisma.booking.delete({
+            where: { book_id: bookingId }
+        });
     }
   
     async getOccupiedSlotsByRoom(roomId: number, date: string): Promise<TimeSlot[]> {

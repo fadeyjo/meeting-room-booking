@@ -16,7 +16,7 @@ export const errorHandler = (
   } else {
     console.error(err);
     res.status(500).json({
-      title: "Internal server error",
+      title: "Ошибка сервера",
       statusCode: 500
     });
   }

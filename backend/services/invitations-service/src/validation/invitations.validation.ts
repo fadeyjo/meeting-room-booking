@@ -3,21 +3,21 @@ import { z } from "zod";
 export const inviteSchema = z.object({
   booking_id: z
     .number()
-    .int({ message: "ID бронирования должен быть целым числом" })
-    .positive({ message: "ID бронирования должен быть положительным" }),
+    .int({ message: "ID бронирования — целое число" })
+    .positive({ message: "ID бронирования — положительное" }),
 
   user_id: z
     .number()
-    .int({ message: "ID пользователя должен быть целым числом" })
-    .positive({ message: "ID пользователя должен быть положительным" }),
+    .int({ message: "id пользователя — целое число" })
+    .positive({ message: "ID пользователя — положительное" }),
 
   role: z
     .string()
-    .min(1, { message: "Задайте роль" }),
+    .min(1, { message: "Задай роль" }),
 
   message: z
     .string()
-    .min(1, { message: "Введлите сообщение" }),
+    .min(1, { message: "Введи сообщение" }),
 });
 
 export const invitationRequestSchema = z.object({

@@ -6,7 +6,7 @@ export const loginSchema = z.object({
     .refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
       message: "Некорректный формат email",
     }),
-  password: z.string().min(8, { message: "Пароль должен быть минимум 8 символов" }),
+  password: z.string().min(8, { message: "Пароль минимум 8 символов" }),
 });
 
 export const registerSchema = z.object({
@@ -32,7 +32,7 @@ export const registerSchema = z.object({
 
   position: z.string().min(1, { message: "Должность обязательна" }),
 
-  password: z.string().min(8, { message: "Пароль должен быть минимум 8 символов" }),
+  password: z.string().min(8, { message: "Пароль минимум 8 символов" }),
 
   roleName: z.string().min(1, { message: "Роль обязательна" }),
 });
@@ -70,13 +70,13 @@ export const redactPersonSchema = z
     patronymic: z
       .string()
       .trim()
-      .min(1, { message: "Отчество должно быть не пустым" })
+      .min(1, { message: "Отчество не пустое" })
       .optional()
       .nullable(),
 
     position: z.string().min(1, { message: "Должность обязательна" }).optional(),
 
-    password: z.string().min(8, { message: "Пароль должен быть минимум 8 символов" }).optional(),
+    password: z.string().min(8, { message: "Пароль минимум 8 символов" }).optional(),
 
     roleName: z.string().min(1, { message: "Роль обязательна" }).optional(),
 
@@ -89,5 +89,5 @@ export const redactPersonSchema = z
       .nullable(),
   })
   .refine((data) => Object.keys(data).length > 0, {
-    message: "Должен быть хотя бы один изменяемый параметр",
+    message: "Нужен хотя бы один параметр для изменения",
   });
