@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getRoomsByDate, createBooking } from '../api/bookings';
+import { useAuth } from '../hooks/useAuth';
+import { useCreateBookingMutation, useGetRoomsByDateQuery } from '../store/apiSlice';
 import { isRangeOverlapping, isRangeWithinFree, timeToMinutes, getBookingDateLimits, getBookingDateOptions } from '../utils/slots';
-import type { RoomWithSlots, TimeSlot } from '@shared/types';
+import type { TimeSlot } from '@shared/types';
 
 export default function BookByDate() {
-  const { accessToken } = useAuth();
+  const { isDemo } = useAuth();
   const navigate = useNavigate();
   const { min: dateMin, max: dateMax } = useMemo(() => getBookingDateLimits(), []);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const dateOptions = useMemo(() => getBookingDateOptions(), []);
-  const [data, setData] = useState<RoomWithSlots[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: data = [], isFetching: loading } = useGetRoomsByDateQuery(date, { skip: isDemo });
+  const [createBookingMu] = useCreateBookingMutation();
   const [selected, setSelected] = useState<{ roomId: number; roomName: string; capacity: number; start: string; end: string; free: TimeSlot[]; occupied: TimeSlot[] } | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -22,11 +22,6 @@ export default function BookByDate() {
   useEffect(() => {
     if (date < dateMin || date > dateMax) setDate(dateMin);
   }, [date, dateMin, dateMax]);
-
-  useEffect(() => {
-    setLoading(true);
-    getRoomsByDate(date, accessToken).then(setData).finally(() => setLoading(false));
-  }, [date, accessToken]);
 
   const handleSelectRange = (roomId: number, roomName: string, capacity: number, start: string, end: string, free: TimeSlot[], occupied: TimeSlot[]) => {
     setSelected({ roomId, roomName, capacity, start, end, free, occupied });
@@ -53,19 +48,30 @@ export default function BookByDate() {
     setTimeError('');
     setSubmitting(true);
     try {
-      await createBooking(accessToken, {
+      await createBookingMu({
         room_id: selected.roomId,
         title,
         description,
         date,
         start_time: selected.start,
         end_time: selected.end,
-      });
+      }).unwrap();
       navigate('/');
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (isDemo) {
+    return (
+      <div className="w-full">
+        <Link to="/book" className="btn-ghost mb-6 inline-flex text-sm">← Назад</Link>
+        <div className="card p-8 text-ink-secondary">
+          В демо-режиме бронирование недоступно. Войдите под учётной записью из seed-скрипта
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

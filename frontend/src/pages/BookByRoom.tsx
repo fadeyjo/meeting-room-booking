@@ -1,22 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getRoom } from '../api/rooms';
-import { getSlotsByRoom, createBooking } from '../api/bookings';
+import { useAuth } from '../hooks/useAuth';
+import { useCreateBookingMutation, useGetRoomQuery, useGetSlotsByRoomQuery } from '../store/apiSlice';
 import { isRangeOverlapping, isRangeWithinFree, timeToMinutes, getBookingDateLimits, getBookingDateOptions } from '../utils/slots';
-import type { Room, TimeSlot } from '@shared/types';
 
 export default function BookByRoom() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { accessToken } = useAuth();
+  const { isDemo } = useAuth();
   const navigate = useNavigate();
   const id = Number(roomId);
   const { min: dateMin, max: dateMax } = useMemo(() => getBookingDateLimits(), []);
   const dateOptions = useMemo(() => getBookingDateOptions(), []);
-  const [room, setRoom] = useState<Room | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [free, setFree] = useState<TimeSlot[]>([]);
-  const [occupied, setOccupied] = useState<TimeSlot[]>([]);
+  const { data: room, isLoading: roomLoading } = useGetRoomQuery(id, { skip: !id || isDemo });
+  const { data: slotsData } = useGetSlotsByRoomQuery(
+    { roomId: id, date },
+    { skip: !id || isDemo }
+  );
+  const free = slotsData?.free ?? [];
+  const occupied = slotsData?.occupied ?? [];
+  const [createBookingMu] = useCreateBookingMutation();
   const [selectedSlot, setSelectedSlot] = useState<{ start: string; end: string } | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -28,18 +31,8 @@ export default function BookByRoom() {
   }, [date, dateMin, dateMax]);
 
   useEffect(() => {
-    if (!id) return;
-    getRoom(id, accessToken).then(setRoom);
-  }, [id, accessToken]);
-
-  useEffect(() => {
-    if (!id) return;
-    getSlotsByRoom(id, date, accessToken).then((res) => {
-      setFree(res.free);
-      setOccupied(res.occupied);
-      setSelectedSlot(null);
-    });
-  }, [id, date, accessToken]);
+    setSelectedSlot(null);
+  }, [id, date]);
 
   const handleSelectRange = (start: string, end: string) => {
     setSelectedSlot({ start, end });
@@ -66,27 +59,42 @@ export default function BookByRoom() {
     setTimeError('');
     setSubmitting(true);
     try {
-      await createBooking(accessToken, {
+      await createBookingMu({
         room_id: room.id,
         title,
         description,
         date,
         start_time: selectedSlot.start,
         end_time: selectedSlot.end,
-      });
+      }).unwrap();
       navigate('/');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!room) {
+  if (isDemo) {
+    return (
+      <div className="w-full">
+        <Link to="/book/by-room" className="btn-ghost mb-6 inline-flex text-sm">← Назад</Link>
+        <div className="card p-8 text-ink-secondary">
+          В демо-режиме бронирование недоступно. Войдите под учётной записью из seed-скрипта
+        </div>
+      </div>
+    );
+  }
+
+  if (!room && roomLoading) {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
         <p className="text-sm text-ink-tertiary">Загрузка...</p>
       </div>
     );
+  }
+
+  if (!room) {
+    return <p className="text-ink-tertiary">Комната не найдена</p>;
   }
 
   return (

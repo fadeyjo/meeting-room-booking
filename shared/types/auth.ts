@@ -48,6 +48,17 @@ export interface PersonDetail {
   firedAt?: string | null
 }
 
+export interface UserProfile extends PersonDetail {
+  phoneNumber: string;
+  birth: string;
+}
+
+export interface ChangePasswordDto {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface RedactPersonDto {
   email?: string;
   phoneNumber?: string;

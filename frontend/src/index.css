@@ -22,17 +22,20 @@
     min-height: 100vh;
   }
 
+  input:not([type]),
   input[type="text"],
+  input[type="search"],
   input[type="email"],
   input[type="password"],
   input[type="tel"],
   input[type="date"],
   input[type="time"],
+  input[type="number"],
   select,
   textarea {
-    @apply rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400
+    @apply rounded-xl border-2 border-slate-300 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm
       transition-all duration-150
-      focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+      focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25;
   }
 
   input:disabled,

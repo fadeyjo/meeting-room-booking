@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getBooking, cancelBooking } from '../api/bookings';
+import { useAuth } from '../hooks/useAuth';
 import {
-  getInvitationsByBooking,
-  updateInvitationRole,
-  removeFromMeeting,
-  getRequestsByBooking,
-  createInvitationRequest,
-} from '../api/invitations';
-import { searchUsers } from '../api/users';
+  useCancelBookingMutation,
+  useCreateInvitationRequestMutation,
+  useGetBookingQuery,
+  useGetInvitationsByBookingQuery,
+  useGetRequestsByBookingQuery,
+  useLazySearchUsersQuery,
+  useRemoveFromMeetingMutation,
+  useUpdateInvitationRoleMutation,
+} from '../store/apiSlice';
 import { invitationStatusLabel } from '../utils/invitationStatus';
 import type { User, Invitation } from '@shared/types';
 import type { PersonBrief } from '@shared/types';
-import type { InvitationRequestItem } from '@shared/types/invitations';
 
 function userName(u: User | PersonBrief) {
   return [u.lastName, u.firstName, u.patronymic].filter(Boolean).join(' ');
@@ -32,12 +32,23 @@ function requestStatusLabel(status: string) {
 export default function BookingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { accessToken, personId } = useAuth();
+  const { personId, isDemo } = useAuth();
   const bid = Number(id);
-  const [detail, setDetail] = useState<Awaited<ReturnType<typeof getBooking>> | null>(null);
-  const [invitations, setInvitations] = useState<Awaited<ReturnType<typeof getInvitationsByBooking>>>([]);
-  const [requests, setRequests] = useState<InvitationRequestItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: detail, isLoading: loadingBooking, refetch: refetchBooking } = useGetBookingQuery(bid, {
+    skip: !bid || isDemo,
+  });
+  const { data: invitations = [], refetch: refetchInv } = useGetInvitationsByBookingQuery(bid, {
+    skip: !bid || isDemo,
+  });
+  const { data: requests = [], refetch: refetchReq } = useGetRequestsByBookingQuery(bid, {
+    skip: !bid || isDemo,
+  });
+  const [triggerSearch] = useLazySearchUsersQuery();
+  const [updateRoleMut] = useUpdateInvitationRoleMutation();
+  const [removeMut] = useRemoveFromMeetingMutation();
+  const [cancelMut] = useCancelBookingMutation();
+  const [createReqMut] = useCreateInvitationRequestMutation();
+
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -48,23 +59,11 @@ export default function BookingDetail() {
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const loadData = () => {
-    if (!bid) return Promise.resolve();
-    return Promise.all([
-      getBooking(bid, accessToken),
-      getInvitationsByBooking(bid, accessToken),
-      getRequestsByBooking(bid, accessToken),
-    ]).then(([d, inv, req]) => {
-      setDetail(d ?? null);
-      setInvitations(inv);
-      setRequests(req);
-    });
+  const refetchAll = () => {
+    void refetchBooking();
+    void refetchInv();
+    void refetchReq();
   };
-
-  useEffect(() => {
-    if (!bid) return;
-    loadData().finally(() => setLoading(false));
-  }, [bid, accessToken]);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -72,22 +71,24 @@ export default function BookingDetail() {
       return;
     }
     const t = setTimeout(() => {
-      searchUsers(search, accessToken).then(setSearchResults);
+      void triggerSearch(search)
+        .unwrap()
+        .then(setSearchResults)
+        .catch(() => setSearchResults([]));
     }, 200);
     return () => clearTimeout(t);
-  }, [search, accessToken]);
+  }, [search, triggerSearch]);
 
   const handleRoleChange = async (invId: number, role: 'спикер' | 'слушатель') => {
-    await updateInvitationRole(invId, role, accessToken);
-    setInvitations((prev) => prev.map((i) => (i.id === invId ? { ...i, role } : i)));
-    loadData();
+    await updateRoleMut({ id: invId, role }).unwrap();
+    refetchAll();
   };
 
   const handleRemoveFromMeeting = async (invId: number) => {
     setRemovingId(invId);
     try {
-      await removeFromMeeting(invId, accessToken);
-      await loadData();
+      await removeMut(invId).unwrap();
+      refetchAll();
     } finally {
       setRemovingId(null);
     }
@@ -97,7 +98,7 @@ export default function BookingDetail() {
     if (!confirm('Отменить бронирование? Это нельзя откатить')) return;
     setCancelling(true);
     try {
-      await cancelBooking(bid, accessToken);
+      await cancelMut(bid).unwrap();
       navigate('/meetings');
     } finally {
       setCancelling(false);
@@ -109,16 +110,16 @@ export default function BookingDetail() {
     setRequestError('');
     setRequestSubmitting(true);
     try {
-      await createInvitationRequest(accessToken, {
+      await createReqMut({
         booking_id: bid,
         user_id: selectedUser.id,
         role: requestRole,
         message: requestMessage || undefined,
-      });
+      }).unwrap();
       setSelectedUser(null);
       setRequestMessage('');
       setSearch('');
-      loadData();
+      refetchAll();
     } catch (e) {
       setRequestError(e instanceof Error ? e.message : 'Не удалось отправить запрос');
     } finally {
@@ -126,11 +127,17 @@ export default function BookingDetail() {
     }
   };
 
-  if (loading || !detail) {
+  if (isDemo) {
+    return (
+      <div className="card p-8 text-ink-secondary">В демо-режиме карточка встречи недоступна</div>
+    );
+  }
+
+  if (loadingBooking || !detail) {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
-        <p className="text-sm text-ink-tertiary">загрузка...</p>
+        <p className="text-sm text-ink-tertiary">Загрузка...</p>
       </div>
     );
   }

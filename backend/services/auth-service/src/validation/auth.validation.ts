@@ -91,3 +91,14 @@ export const redactPersonSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: "Нужен хотя бы один параметр для изменения",
   });
+
+export const changePasswordSchema = z
+  .object({
+    oldPassword: z.string().min(8, { message: "Пароль минимум 8 символов" }),
+    newPassword: z.string().min(8, { message: "Новый пароль минимум 8 символов" }),
+    confirmPassword: z.string().min(1, { message: "Подтверждение обязательно" }),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Пароли не совпадают",
+    path: ["confirmPassword"],
+  });

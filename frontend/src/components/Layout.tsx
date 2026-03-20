@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { useGetMeQuery, useGetMyBookingsQuery } from '../store/apiSlice';
 
 const navItems = [
   { to: '/', label: 'Главная' },
@@ -8,6 +9,7 @@ const navItems = [
   { to: '/book/by-room', label: 'По комнате' },
   { to: '/invite', label: 'Пригласить' },
   { to: '/invitations', label: 'Приглашения' },
+  { to: '/profile', label: 'Профиль' },
 ];
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -27,9 +29,15 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   );
 }
 
+function userShortName(p: { lastName: string; firstName: string }) {
+  return `${p.lastName} ${p.firstName.charAt(0)}.`;
+}
+
 export default function Layout() {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout, isDemo } = useAuth();
   const navigate = useNavigate();
+  const { data: me } = useGetMeQuery(undefined, { skip: !isAuthenticated || isDemo });
+  const { data: myBookings = [] } = useGetMyBookingsQuery(undefined, { skip: !isAuthenticated || isDemo });
 
   const handleLogout = async () => {
     await logout();
@@ -56,13 +64,22 @@ export default function Layout() {
               </Link>
             )}
             {isAuthenticated && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn-ghost text-sm"
-              >
-                Выйти
-              </button>
+              <>
+                {isDemo ? (
+                  <span className="text-sm text-ink-secondary hidden sm:inline">Демо</span>
+                ) : me ? (
+                  <span className="text-sm text-ink-secondary hidden sm:inline" title={`${me.lastName} ${me.firstName} · мои брони: ${myBookings.length}`}>
+                    {userShortName(me)} · броней: {myBookings.length}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn-ghost text-sm"
+                >
+                  Выйти
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { getUsers, createUser, updateUser } from '../api/users';
+import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useCreateUserMutation, useGetUsersQuery, useUpdateUserMutation } from '../store/apiSlice';
 import type { User, CreateUserDto, UpdateUserDto } from '@shared/types';
 
 const POSITION_OPTIONS = ['Программист', 'Аналитик', 'Конструктор', 'Технолог', 'Руководитель', 'Тестировщик', 'Менеджер'] as const;
@@ -18,19 +18,14 @@ const emptyCreateForm: CreateUserDto = {
 };
 
 export default function Admin() {
-  const { accessToken } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  useAuth();
+  const { data: users = [], isLoading: loading } = useGetUsersQuery();
+  const [createUserMu] = useCreateUserMutation();
+  const [updateUserMu] = useUpdateUserMutation();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState<CreateUserDto>(emptyCreateForm);
-
-  const loadUsers = () => getUsers(accessToken).then(setUsers).finally(() => setLoading(false));
-
-  useEffect(() => {
-    loadUsers();
-  }, [accessToken]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +35,7 @@ export default function Admin() {
       return;
     }
     try {
-      const created = await createUser(accessToken, form);
-      setUsers((prev) => [...prev, created]);
+      await createUserMu(form).unwrap();
       setShowForm(false);
       setForm(emptyCreateForm);
     } catch (err) {
@@ -70,8 +64,7 @@ export default function Admin() {
       body.password = editForm.password;
     }
     try {
-      const updated = await updateUser(accessToken, editing.id, body);
-      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      await updateUserMu({ id: editing.id, body }).unwrap();
       setEditing(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');

@@ -1,32 +1,30 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getBooking } from '../api/bookings';
-import { getInvitationsByBooking } from '../api/invitations';
-import { searchUsers } from '../api/users';
-import { createInvitation as postInvitation } from '../api/invitations';
+import { useAuth } from '../hooks/useAuth';
+import {
+  useCreateInvitationMutation,
+  useGetBookingQuery,
+  useGetInvitationsByBookingQuery,
+  useLazySearchUsersQuery,
+} from '../store/apiSlice';
 import type { User } from '@shared/types';
 
 type PendingInvite = { user: User; role: 'спикер' | 'слушатель'; message: string };
 
 export default function InviteBooking() {
   const { bookingId } = useParams<{ bookingId: string }>();
-  const { accessToken } = useAuth();
+  const { isDemo } = useAuth();
   const navigate = useNavigate();
   const id = Number(bookingId);
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [pending, setPending] = useState<PendingInvite[]>([]);
-  const [bookingDetail, setBookingDetail] = useState<Awaited<ReturnType<typeof getBooking>> | null>(null);
-  const [invitations, setInvitations] = useState<Awaited<ReturnType<typeof getInvitationsByBooking>>>([]);
+  const { data: bookingDetail } = useGetBookingQuery(id, { skip: !id || isDemo });
+  const { data: invitations = [] } = useGetInvitationsByBookingQuery(id, { skip: !id || isDemo });
+  const [triggerSearch] = useLazySearchUsersQuery();
+  const [createInvitationMu] = useCreateInvitationMutation();
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
-
-  useEffect(() => {
-    if (!id) return;
-    getBooking(id, accessToken).then((b) => b && setBookingDetail(b));
-    getInvitationsByBooking(id, accessToken).then(setInvitations);
-  }, [id, accessToken]);
 
   const capacity = bookingDetail?.room?.capacity ?? 0;
   const speakers = bookingDetail?.speakers ?? [];
@@ -57,12 +55,13 @@ export default function InviteBooking() {
       return;
     }
     const t = setTimeout(() => {
-      searchUsers(search, accessToken).then((list) =>
-        setSearchResults(list.filter((u) => !alreadyInMeetingIds.has(u.id)))
-      );
+      void triggerSearch(search)
+        .unwrap()
+        .then((list) => setSearchResults(list.filter((u) => !alreadyInMeetingIds.has(u.id))))
+        .catch(() => setSearchResults([]));
     }, 200);
     return () => clearTimeout(t);
-  }, [search, accessToken, alreadyInMeetingIds]);
+  }, [search, triggerSearch, alreadyInMeetingIds]);
 
   const addPending = (user: User, role: 'спикер' | 'слушатель') => {
     if (alreadyInMeetingIds.has(user.id)) return;
@@ -89,7 +88,12 @@ export default function InviteBooking() {
     setSubmitting(true);
     try {
       for (const p of pending) {
-        await postInvitation(accessToken, { booking_id: id, user_id: p.user.id, role: p.role, message: p.message || undefined });
+        await createInvitationMu({
+          booking_id: id,
+          user_id: p.user.id,
+          role: p.role,
+          message: p.message || undefined,
+        }).unwrap();
       }
       setSent(true);
       setTimeout(() => navigate('/'), 1500);
@@ -99,6 +103,15 @@ export default function InviteBooking() {
   };
 
   if (!id) return null;
+
+  if (isDemo) {
+    return (
+      <div className="w-full">
+        <Link to="/invite" className="btn-ghost mb-6 inline-flex text-sm">← Назад</Link>
+        <div className="card p-8 text-ink-secondary">В демо-режиме приглашения недоступны</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

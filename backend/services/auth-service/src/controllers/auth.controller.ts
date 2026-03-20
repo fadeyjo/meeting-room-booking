@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import type { RegisterDto, LoginDto, RefreshDto, LogoutDto, RedactPersonDto } from "@shared-types/types";
+import type { RegisterDto, LoginDto, RefreshDto, LogoutDto, RedactPersonDto, ChangePasswordDto } from "@shared-types/types";
 import { AuthService } from "../services/auth.service";
 import { HttpError } from "@shared-backend/utils/http-error";
 
@@ -95,6 +95,33 @@ export class AuthController {
       res.json(result);
     } catch (error: any) {
       next(error)
+    }
+  }
+
+  async getMe(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.person) {
+        next(new HttpError("Не авторизован", 401));
+        return;
+      }
+      const result = await authService.getProfile(req.person.personId);
+      res.json(result);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  async changePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.person) {
+        next(new HttpError("Не авторизован", 401));
+        return;
+      }
+      const { oldPassword, newPassword }: ChangePasswordDto = req.body;
+      await authService.changePassword(req.person.personId, oldPassword, newPassword);
+      res.sendStatus(204);
+    } catch (error: any) {
+      next(error);
     }
   }
 }

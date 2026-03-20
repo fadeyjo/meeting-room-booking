@@ -110,3 +110,13 @@ services:
       - rooms-service
       - invitations-service
       - bookings-service
+
+  frontend-mobx:
+    build:
+      context: .
+      dockerfile: frontend-mobx/Dockerfile
+    ports:
+      - "8081:80"
+    depends_on:
+      - auth-service
+      - bookings-service

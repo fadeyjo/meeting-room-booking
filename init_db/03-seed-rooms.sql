@@ -1,7 +1,5 @@
--- Кодировка UTF-8 для кириллицы
 SET NAMES utf8mb4;
 
--- Переговорки названы в честь животных (как в описании API)
 INSERT INTO meeting_room.rooms (
     room_name, floor, room, is_active, capacity, has_projector, has_tv, has_whiteboard, room_description
 ) VALUES

@@ -5,7 +5,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken
 } from "@shared-backend/utils/jwt";
-import type { RegisterDto, TokensDto, LogoutedDto, RedactPersonDto, PersonDetail } from "@shared-types/types";
+import type { RegisterDto, TokensDto, LogoutedDto, RedactPersonDto, PersonDetail, UserProfile } from "@shared-types/types";
 import { HttpError } from "@shared-backend/utils/http-error";
 import { AccessTokenPayload } from "@shared-backend/utils/jwt";
 
@@ -403,5 +403,50 @@ export class AuthService {
     }
 
     return response;
+  }
+
+  async getProfile(personId: number): Promise<UserProfile> {
+    const person = await prisma.person.findUnique({
+      where: { person_id: personId },
+      include: { role: true, position: true },
+    });
+    if (!person) {
+      throw new HttpError("Пользователь не найден", 404);
+    }
+    return {
+      id: person.person_id,
+      email: person.email,
+      firstName: person.first_name,
+      lastName: person.last_name,
+      patronymic: person.patronymic ?? null,
+      phoneNumber: person.phone_number,
+      birth: person.birth.toISOString().slice(0, 10),
+      position: person.position.position,
+      role: person.role.role_name,
+      firedAt: person.fired_at?.toISOString() ?? null,
+    };
+  }
+
+  async changePassword(personId: number, oldPassword: string, newPassword: string): Promise<void> {
+    const person = await prisma.person.findUnique({
+      where: { person_id: personId },
+    });
+    if (!person) {
+      throw new HttpError("Пользователь не найден", 404);
+    }
+    const valid = await bcrypt.compare(oldPassword, person.hashed_password);
+    if (!valid) {
+      throw new HttpError("Неверный пароль", 401);
+    }
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    await prisma.person.update({
+      where: { person_id: personId },
+      data: { hashed_password: hashedPassword },
+    });
+    await prisma.refreshToken.updateMany({
+      where: { person_id: personId },
+      data: { is_revoked: true },
+    });
   }
 }

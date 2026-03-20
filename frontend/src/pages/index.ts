@@ -10,3 +10,4 @@ export { default as Invite } from './Invite';
 export { default as InviteBooking } from './InviteBooking';
 export { default as Login } from './Login';
 export { default as Meetings } from './Meetings';
+export { default as Profile } from './Profile';

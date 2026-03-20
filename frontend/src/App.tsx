@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import {
   Admin,
@@ -14,46 +14,23 @@ import {
   InviteBooking,
   Login,
   Meetings,
+  Profile,
 } from './pages';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isReady } = useAuth();
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
-        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
-        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
-      </div>
-    );
-  }
+  const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function AdminOnly({ children }: { children: React.ReactNode }) {
-  const { isAdmin, isReady } = useAuth();
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
-        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
-        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
-      </div>
-    );
-  }
+  const { isAdmin } = useAuth();
   if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 function PublicOnly({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isReady } = useAuth();
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface">
-        <div className="h-10 w-10 rounded-full border-2 border-primary-200 border-t-primary-600 animate-spin" />
-        <p className="text-sm font-medium text-ink-tertiary">Загрузка...</p>
-      </div>
-    );
-  }
+  const { isAuthenticated } = useAuth();
   if (isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -73,6 +50,7 @@ export default function App() {
         <Route path="invite/:bookingId" element={<ProtectedRoute><InviteBooking /></ProtectedRoute>} />
         <Route path="meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
         <Route path="invitations" element={<ProtectedRoute><Invitations /></ProtectedRoute>} />
+        <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="booking/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

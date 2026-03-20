@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getMyBookings } from '../api/bookings';
+import { useAuth } from '../hooks/useAuth';
+import { useGetMyBookingsQuery } from '../store/apiSlice';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -54,15 +54,10 @@ function CollapsibleSection({
 }
 
 export default function Invite() {
-  const { accessToken } = useAuth();
-  const [bookings, setBookings] = useState<Awaited<ReturnType<typeof getMyBookings>>>([]);
-  const [loading, setLoading] = useState(true);
+  const { isDemo } = useAuth();
+  const { data: bookings = [], isLoading: loading } = useGetMyBookingsQuery(undefined, { skip: isDemo });
   const [upcomingOpen, setUpcomingOpen] = useState(true);
   const [pastOpen, setPastOpen] = useState(false);
-
-  useEffect(() => {
-    getMyBookings(accessToken).then(setBookings).finally(() => setLoading(false));
-  }, [accessToken]);
 
   const { upcoming, past } = useMemo(() => {
     const t = today();

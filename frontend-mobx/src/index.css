@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --shadow-soft: 0 2px 8px -2px rgb(15 23 42 / 0.08), 0 4px 16px -4px rgb(15 23 42 / 0.06);
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply text-ink-primary antialiased font-sans;
+    background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%);
+    min-height: 100vh;
+  }
+
+  input:not([type]),
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  select,
+  textarea {
+    @apply rounded-xl border-2 border-slate-300 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm
+      transition-all duration-150
+      focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25;
+  }
+
+  button:not(:disabled) {
+    @apply cursor-pointer transition-all duration-150 active:scale-[0.98];
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl font-medium bg-primary-600 text-white shadow-soft px-4 py-2.5 hover:bg-primary-700 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl font-medium border border-slate-200 bg-white px-4 py-2.5 text-slate-700 hover:bg-slate-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-xl font-medium text-slate-600 px-3 py-2 hover:bg-slate-100;
+  }
+
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-ink-primary;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-sm text-ink-tertiary;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-ink-secondary mb-1.5;
+  }
+}

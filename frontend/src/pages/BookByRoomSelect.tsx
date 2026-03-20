@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getRooms } from '../api/rooms';
+import { useAuth } from '../hooks/useAuth';
+import { useGetRoomsQuery } from '../store/apiSlice';
 
 export default function BookByRoomSelect() {
-  const { accessToken } = useAuth();
-  const [rooms, setRooms] = useState<Awaited<ReturnType<typeof getRooms>>>([]);
-  const [loading, setLoading] = useState(true);
+  const { isDemo } = useAuth();
+  const { data: rooms = [], isLoading: loading } = useGetRoomsQuery({ is_active: true }, { skip: isDemo });
 
-  useEffect(() => {
-    getRooms(accessToken, { is_active: true }).then(setRooms).finally(() => setLoading(false));
-  }, [accessToken]);
+  if (isDemo) {
+    return (
+      <div className="w-full">
+        <Link to="/book" className="btn-ghost mb-6 inline-flex text-sm">← Назад</Link>
+        <div className="card p-8 text-ink-secondary">
+          В демо-режиме список переговорок недоступен. Войдите под учётной записью из seed-скрипта
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

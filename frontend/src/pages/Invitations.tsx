@@ -1,54 +1,50 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import {
-  getMyInvitations,
-  acceptInvitation,
-  declineInvitation,
-  getIncomingRequests,
-  approveInvitationRequest,
-  rejectInvitationRequest,
-} from '../api/invitations';
+  useAcceptInvitationMutation,
+  useApproveInvitationRequestMutation,
+  useDeclineInvitationMutation,
+  useGetIncomingRequestsQuery,
+  useGetMyInvitationsQuery,
+  useRejectInvitationRequestMutation,
+} from '../store/apiSlice';
 import { invitationStatusLabel } from '../utils/invitationStatus';
 
 export default function Invitations() {
-  const { accessToken } = useAuth();
-  const [list, setList] = useState<Awaited<ReturnType<typeof getMyInvitations>>>([]);
-  const [requests, setRequests] = useState<Awaited<ReturnType<typeof getIncomingRequests>>>([]);
-  const [loading, setLoading] = useState(true);
+  const { isDemo } = useAuth();
+  const { data: list = [], isLoading: loadingInv } = useGetMyInvitationsQuery(undefined, { skip: isDemo });
+  const { data: requests = [], isLoading: loadingReq } = useGetIncomingRequestsQuery(undefined, { skip: isDemo });
+  const [acceptInv] = useAcceptInvitationMutation();
+  const [declineInv] = useDeclineInvitationMutation();
+  const [approveReq] = useApproveInvitationRequestMutation();
+  const [rejectReq] = useRejectInvitationRequestMutation();
 
-  const load = async () => {
-    const [invList, reqList] = await Promise.all([
-      getMyInvitations(accessToken),
-      getIncomingRequests(accessToken),
-    ]);
-    setList(invList);
-    setRequests(reqList);
-  };
-
-  useEffect(() => {
-    load().finally(() => setLoading(false));
-  }, [accessToken]);
+  const loading = loadingInv || loadingReq;
 
   const handleAccept = async (id: number) => {
-    await acceptInvitation(id, accessToken);
-    load();
+    await acceptInv(id).unwrap();
   };
 
   const handleDecline = async (id: number) => {
-    await declineInvitation(id, accessToken);
-    load();
+    await declineInv(id).unwrap();
   };
 
   const handleApproveRequest = async (id: number) => {
-    await approveInvitationRequest(id, accessToken);
-    load();
+    await approveReq(id).unwrap();
   };
 
   const handleRejectRequest = async (id: number) => {
-    await rejectInvitationRequest(id, accessToken);
-    load();
+    await rejectReq(id).unwrap();
   };
+
+  if (isDemo) {
+    return (
+      <div className="w-full">
+        <h1 className="page-title">Приглашения</h1>
+        <div className="card p-8 text-ink-secondary">В демо-режиме раздел недоступен</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
