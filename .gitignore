@@ -7,3 +7,11 @@
 
 frontend/node_modules
 frontend/dist
+
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
+packages/*/node_modules
+packages/*/dist

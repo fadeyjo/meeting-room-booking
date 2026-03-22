@@ -1,12 +1,12 @@
-# Бронирование переговорных
 
-## Два клиента (лабораторная: Redux + MobX)
+запуск: `docker compose up --build` - `http://localhost`
 
-| Клиент | Стек | Docker |
-|--------|------|--------|
-| `frontend/` | Redux Toolkit + RTK Query | http://localhost:80 |
-| `frontend-mobx/` | MobX + `fetch` + кэш в сторе (~60 с) | http://localhost:8081 |
+локально MobX: `cd frontend-mobx && npm install && npm run dev` (порт 5174) - `http://localhost:5174`
 
-Запуск всего стека: `docker compose up --build`
+через докер - `http://localhost:8081`
 
-Локально MobX: `cd frontend-mobx && npm install && npm run dev` (порт 5174, прокси `/api` → `localhost:5000` — при микросервисах удобнее смотреть через Docker).
+
+## E2E
+- npx playwright install chromium
+- docker compose up
+- npm run test:e2e
